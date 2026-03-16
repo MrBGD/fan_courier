@@ -18,10 +18,7 @@ public:
                                  weight(product_weight), ID(product_id), price(product_price) {
     }
 
-    Product(const Product &another_product) : name{another_product.name}, stock_number{another_product.stock_number},
-                                              weight{another_product.weight}, ID{another_product.ID},
-                                              price{another_product.price} {
-    }
+    Product(const Product &another_product) =default;
 
     Product &operator=(const Product &another_product) {
         if (this != &another_product) {
@@ -88,8 +85,7 @@ class Destinatar {
     }
 
 public:
-    Destinatar() : name(""), address(""), phone_number(""), email("") {
-    }
+    Destinatar() =default ;
 
     Destinatar(std::string name_dest, std::string address_dest, std::string phone_number_dest,
                std::string email_dest) : name(std::move(name_dest)), address(std::move(address_dest)),
@@ -188,6 +184,7 @@ static void list_products(std::vector<Product> &products) {
 
 
 int main() {
+    srand(time(nullptr));
     std::cout << "Welcome to FanCurier. Creaza-ti un cont!" << std::endl;
     std::cout << "Introduce-ti numele, adresa, nr de telefon si email-ul:\n";
     Destinatar utilizator;
