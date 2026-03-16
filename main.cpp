@@ -51,16 +51,15 @@ public:
         if (product.stock_number > 1) {
             std::cout << "In stoc!" << std::endl;
             return true;
-        } else if (product.stock_number == 1) {
+        }
+        if (product.stock_number == 1) {
             std::cout << "Un singur produs in stoc!";
             return true;
-        } else {
-            std::cout << "Stoc epuizat!" << std::endl;
-            return false;
         }
+        std::cout << "Stoc epuizat!" << std::endl;
+        return false;
     }
 };
-
 
 class Destinatar {
     std::string name;
@@ -140,6 +139,8 @@ public:
     }
 
     friend std::ostream &operator<<(std::ostream &os, const Colet &colet) {
+        for (const auto& item:colet.content)
+            os << "Content: " <<item<<std::endl;
         os << "AWB: " << colet.AWB << std::endl;
         os << "Weight: " << colet.weight << std::endl;
         os << "Price: " << colet.price << std::endl;
@@ -161,8 +162,7 @@ class Duba {
     int tier;
 
 public:
-    Duba(const std::string &numar_inmatriculare_duba, int max_capacity_duba, int tier_duba) : numar_inmatriculare(
-        numar_inmatriculare_duba), max_capacity(max_capacity_duba), tier(tier_duba) {
+    Duba(std::string numar_inmatriculare_duba, int max_capacity_duba, int tier_duba) : numar_inmatriculare(std::move(numar_inmatriculare_duba)), max_capacity(max_capacity_duba), tier(tier_duba) {
     }
 };
 
@@ -177,12 +177,12 @@ public:
     }
 };
 
-void list_products(std::vector<Product> &products) {
+static void list_products(std::vector<Product> &products) {
     std::cout << "Lista de produse disponibile astazi: " << std::endl;
-    for (int index = 0; index < products.size(); index++) {
-        std::cout << "ID: " << products[index].get_ID() << std::endl;
-        std::cout << "Nume produs: " << products[index].get_name() << std::endl;
-        std::cout << "Pret " << products[index].get_price() << " RON" << std::endl;
+    for (const auto & product : products) {
+        std::cout << "ID: " << product.get_ID() << std::endl;
+        std::cout << "Nume produs: " << product.get_name() << std::endl;
+        std::cout << "Pret " << product.get_price() << " RON" << std::endl;
     }
 }
 
@@ -207,6 +207,11 @@ int main() {
     Colet package_box(package_content, 0, int(rand()), 0, utilizator);
     while (loop) {
         std::cout << "Choose an option: " << std::endl;
+        std::cout<<"1: Listeaza produsele"<<std::endl;
+        std::cout<<"2: Adauga produsul in cos"<<std::endl;
+        std::cout<<"3: Exit app"<<std::endl;
+        std::cout<<"4: Afiseaza informatii colet"<<std::endl;
+
         std::cin >> choose;
         switch (choose) {
             case 1: {
@@ -217,7 +222,7 @@ int main() {
             case 2: {
                 std::cout << "Alege ID-ul produsului dorit:";
                 std::cin >> id;
-                if (id > 0 and id <= products.size()) {
+                if (id > 0 and id <= int(products.size())) {
                     Product &chosen_product = products[id - 1];
                     package_box.add_item_into_box(chosen_product);
                 } else
