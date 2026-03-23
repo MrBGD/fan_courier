@@ -34,7 +34,6 @@ public:
     ~Product() = default;
 
     [[nodiscard]] const std::string &get_name() const { return name; }
-    [[nodiscard]] int get_stock_number() const { return stock_number; }
     [[nodiscard]] int get_weight() const { return weight; }
     [[nodiscard]] int get_ID() const { return ID; }
     [[nodiscard]] int get_price() const { return price; }
@@ -126,6 +125,13 @@ class Colet {
     int weight;
     const int AWB;
     int price;
+
+public:
+    [[nodiscard]] int package_price() const {
+        return price;
+    }
+
+private:
     Destinatar destinatar;
 
 public:
@@ -154,6 +160,7 @@ public:
         this->content.push_back(chosen_product.get_name());
         chosen_product.scade_stock();
     }
+
 };
 
 class Duba {
@@ -168,7 +175,7 @@ public:
     [[nodiscard]] int get_max_capacity() const {
         return max_capacity;
     }
-    [[nodiscard]] std::string get_numar_inmatriculare() const {
+    [[nodiscard]] const std::string& get_numar_inmatriculare() const {
         return numar_inmatriculare;
     }
 
@@ -184,16 +191,22 @@ public:
     Curier(std::string numar_telefon_curier, std::string nume_curier, int tier,Duba duba_curier) : phone_number(std::move(numar_telefon_curier)), name(std::move(nume_curier)),tier(tier), duba(std::move(duba_curier)) {}
 
     void receive_box(const Colet& package) {
-        if (package.get_weight()<=this->duba.get_max_capacity()) {
+        double multiplier = 1.0 + (this->tier * 0.10);
+        int actual_capacity = this->duba.get_max_capacity() * multiplier;
+        if (package.get_weight()<=actual_capacity) {
             std::cout<<"Coletul va fi livrat de: "<<this->name << std::endl;
             std::cout<<"Contact: "<<this->phone_number<<" "<<this->duba.get_numar_inmatriculare()<<std::endl;
         }
         else {
             std::cout<<"Capacity excedeed! Choose another postman."<<std::endl;
         }
+        if (package.package_price() > 2000 && this->tier <= 2) {
+            std::cout << "Eroare: Comenzile peste 2000 RON necesita un curier VIP (Tier 3+)!\n";
+            return;
+        }
     }
 
-    [[nodiscard]] std::string get_name() const {
+    [[nodiscard]] const std::string& get_name() const {
         return name;
     }
 
@@ -203,16 +216,17 @@ public:
 };
 
 
-static void list_products(std::vector<Product> &products) {
+static void list_products(const std::vector<Product> &products) {
     std::cout << "Lista de produse disponibile astazi: " << std::endl;
     for (const auto & product : products) {
         std::cout << "ID: " << product.get_ID() << std::endl;
         std::cout << "Nume produs: " << product.get_name() << std::endl;
         std::cout << "Pret " << product.get_price() << " RON" << std::endl;
+        Product::stock_status(product);
     }
 }
 
-static void make_order(std::vector<Curier> &postmans) {
+static void make_order(const std::vector<Curier> &postmans) {
     std::cout<<"Curieri disponibili: "<<std::endl;
     int id=1;
     for (const auto & postman : postmans) {
