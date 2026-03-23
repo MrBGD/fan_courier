@@ -178,6 +178,9 @@ public:
     [[nodiscard]] const std::string& get_numar_inmatriculare() const {
         return numar_inmatriculare;
     }
+    [[nodiscard]] int duba_tier() const {
+        return tier;
+    }
 
 };
 
@@ -191,7 +194,7 @@ public:
     Curier(std::string numar_telefon_curier, std::string nume_curier, int tier,Duba duba_curier) : phone_number(std::move(numar_telefon_curier)), name(std::move(nume_curier)),tier(tier), duba(std::move(duba_curier)) {}
 
     void receive_box(const Colet& package) {
-        double multiplier = 1.0 + (this->tier * 0.10);
+        double multiplier = 1.0 + (duba.duba_tier() * 0.10);
         int actual_capacity = this->duba.get_max_capacity() * multiplier;
         if (package.get_weight()<=actual_capacity) {
             std::cout<<"Coletul va fi livrat de: "<<this->name << std::endl;
