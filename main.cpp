@@ -134,6 +134,10 @@ public:
                                          price(box_price), destinatar(std::move(destinatar_colet)) {
     }
 
+    [[nodiscard]] int get_weight() const {
+        return weight;
+    }
+
     friend std::ostream &operator<<(std::ostream &os, const Colet &colet) {
         for (const auto& item:colet.content)
             os << "Content: " <<item<<std::endl;
@@ -157,21 +161,47 @@ class Duba {
     int max_capacity;
     int tier;
 
+
 public:
-    Duba(std::string numar_inmatriculare_duba, int max_capacity_duba, int tier_duba) : numar_inmatriculare(std::move(numar_inmatriculare_duba)), max_capacity(max_capacity_duba), tier(tier_duba) {
+    Duba(std::string numar_inmatriculare_duba, int max_capacity_duba, int tier_duba) : numar_inmatriculare(std::move(numar_inmatriculare_duba)), max_capacity(max_capacity_duba), tier(tier_duba) {}
+
+    [[nodiscard]] int get_max_capacity() const {
+        return max_capacity;
     }
+    [[nodiscard]] std::string get_numar_inmatriculare() const {
+        return numar_inmatriculare;
+    }
+
 };
 
 class Curier {
     const std::string phone_number;
     const std::string name;
+    int tier;
     Duba duba;
 
 public:
-    Curier(std::string numar_telefon_curier, std::string nume_curier, Duba duba_curier) : phone_number(
-        std::move(numar_telefon_curier)), name(std::move(nume_curier)), duba(std::move(duba_curier)) {
+    Curier(std::string numar_telefon_curier, std::string nume_curier, int tier,Duba duba_curier) : phone_number(std::move(numar_telefon_curier)), name(std::move(nume_curier)),tier(tier), duba(std::move(duba_curier)) {}
+
+    void receive_box(const Colet& package) {
+        if (package.get_weight()<=this->duba.get_max_capacity()) {
+            std::cout<<"Coletul va fi livrat de: "<<this->name << std::endl;
+            std::cout<<"Contact: "<<this->phone_number<<" "<<this->duba.get_numar_inmatriculare()<<std::endl;
+        }
+        else {
+            std::cout<<"Capacity excedeed! Choose another postman."<<std::endl;
+        }
+    }
+
+    [[nodiscard]] std::string get_name() const {
+        return name;
+    }
+
+    [[nodiscard]] int get_tier() const {
+        return tier;
     }
 };
+
 
 static void list_products(std::vector<Product> &products) {
     std::cout << "Lista de produse disponibile astazi: " << std::endl;
@@ -182,14 +212,32 @@ static void list_products(std::vector<Product> &products) {
     }
 }
 
+static void make_order(std::vector<Curier> &postmans) {
+    std::cout<<"Curieri disponibili: "<<std::endl;
+    int id=1;
+    for (const auto & postman : postmans) {
+        std::cout<<"ID: "<<id<<std::endl;
+        std::cout<<"Nume: "<<postman.get_name()<<std::endl;
+        std::cout<<"Tier: "<<postman.get_tier()<<std::endl;
+        id++;
+    }
+
+}
+
 
 int main() {
+    bool loop = true;
+    int choose, id_product,id_postman;
+    std::vector<std::string> package_content;
+
     srand(time(nullptr));
     std::cout << "Welcome to FanCurier. Creaza-ti un cont!" << std::endl;
     std::cout << "Introduce-ti numele, adresa, nr de telefon si email-ul:\n";
     Destinatar utilizator;
     std::cin >> utilizator;
     std::cout << "Utilizator creat cu succes:\n" << utilizator;
+    Colet package_box(package_content, 0, int(rand()), 0, utilizator);
+
 
     std::vector<Product> products{
         Product("casti audio", 10, 300, 1, 100),
@@ -198,40 +246,60 @@ int main() {
         Product("deodorant", 30, 100, 4, 15),
         Product("matura", 34, 200, 5, 10)
     };
-    bool loop = true;
-    int choose, id;
-    std::vector<std::string> package_content;
-    Colet package_box(package_content, 0, int(rand()), 0, utilizator);
+    std::vector <Duba> list_of_vans{
+        Duba("B111AAA",1000,1),
+        Duba("B222AAA",5000,2),
+        Duba("B333AAA",10000,3),
+        Duba("B444AAA",15000,4)
+    };
+    std::vector <Curier> list_of_postmans{
+        Curier("0711111111","Nea caisa",1,list_of_vans[0]),
+        Curier("0722222222","Nea gheorghe",2,list_of_vans[1]),
+        Curier("0733333333","Adelin",3,list_of_vans[2]),
+        Curier("0744444444","Domn Marcea",4,list_of_vans[3])
+    };
+
+
+
     while (loop) {
         std::cout << "Choose an option: " << std::endl;
         std::cout<<"1: Listeaza produsele"<<std::endl;
         std::cout<<"2: Adauga produsul in cos"<<std::endl;
-        std::cout<<"3: Exit app"<<std::endl;
-        std::cout<<"4: Afiseaza informatii colet"<<std::endl;
-
+        std::cout<<"3: Afiseaza informatii colet"<<std::endl;
+        std::cout<<"4: Trimite comanda"<<std::endl;
+        std::cout<<"5: Exit app"<<std::endl;
         std::cin >> choose;
         switch (choose) {
             case 1: {
-                std::cout << "Lista produse: " << std::endl;
                 list_products(products);
                 break;
             }
             case 2: {
                 std::cout << "Alege ID-ul produsului dorit:";
-                std::cin >> id;
-                if (id > 0 and id <= int(products.size())) {
-                    Product &chosen_product = products[id - 1];
+                std::cin >> id_product;
+                if (id_product > 0 and id_product <= int(products.size())) {
+                    Product &chosen_product = products[id_product - 1];
                     package_box.add_item_into_box(chosen_product);
                 } else
                     std::cout << "Id invalid";
                 break;
             }
             case 3: {
-                loop = false;
+                std::cout<<package_box;
                 break;
             }
             case 4: {
-                std::cout<<package_box;
+                make_order(list_of_postmans);
+                std::cout << "Alege curierul dorit:";
+                std::cin >> id_postman;
+                if (id_postman > 0 and id_postman <= int(list_of_postmans.size())) {
+                    list_of_postmans[id_postman - 1].receive_box(package_box);
+                } else
+                    std::cout << "Id invalid";
+                break;
+            }
+            case 5: {
+                loop = false;
                 break;
             }
             default: {
