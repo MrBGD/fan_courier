@@ -3,7 +3,7 @@
 #include <regex>
 #include <utility>
 #include <vector>
-#include <cstdlib>
+#include <algorithm>
 
 class Product {
     std::string name;
@@ -193,20 +193,22 @@ class Curier {
 public:
     Curier(std::string numar_telefon_curier, std::string nume_curier, int tier,Duba duba_curier) : phone_number(std::move(numar_telefon_curier)), name(std::move(nume_curier)),tier(tier), duba(std::move(duba_curier)) {}
 
-    void receive_box(const Colet& package) {
+    bool receive_box(const Colet& package) {
         double multiplier = 1.0 + (duba.duba_tier() * 0.10);
         int actual_capacity = this->duba.get_max_capacity() * multiplier;
+        if (package.package_price() > 2000 && this->tier <= 2) {
+            std::cout << "Eroare: Comenzile peste 2000 RON necesita un curier VIP (Tier 3+)!\n";
+            return false;
+        }
         if (package.get_weight()<=actual_capacity) {
             std::cout<<"Coletul va fi livrat de: "<<this->name << std::endl;
             std::cout<<"Contact: "<<this->phone_number<<" "<<this->duba.get_numar_inmatriculare()<<std::endl;
         }
         else {
             std::cout<<"Capacity excedeed! Choose another postman."<<std::endl;
+            return false;
         }
-        if (package.package_price() > 2000 && this->tier <= 2) {
-            std::cout << "Eroare: Comenzile peste 2000 RON necesita un curier VIP (Tier 3+)!\n";
-            return;
-        }
+        return true;
     }
 
     [[nodiscard]] const std::string& get_name() const {
@@ -218,43 +220,7 @@ public:
     }
 };
 
-
-static void list_products(const std::vector<Product> &products) {
-    std::cout << "Lista de produse disponibile astazi: " << std::endl;
-    for (const auto & product : products) {
-        std::cout << "ID: " << product.get_ID() << std::endl;
-        std::cout << "Nume produs: " << product.get_name() << std::endl;
-        std::cout << "Pret " << product.get_price() << " RON" << std::endl;
-        Product::stock_status(product);
-    }
-}
-
-static void make_order(const std::vector<Curier> &postmans) {
-    std::cout<<"Curieri disponibili: "<<std::endl;
-    int id=1;
-    for (const auto & postman : postmans) {
-        std::cout<<"ID: "<<id<<std::endl;
-        std::cout<<"Nume: "<<postman.get_name()<<std::endl;
-        std::cout<<"Tier: "<<postman.get_tier()<<std::endl;
-        id++;
-    }
-
-}
-
-
-int main() {
-    bool loop = true;
-    int choose, id_product,id_postman;
-    std::vector<std::string> package_content;
-
-    srand(time(nullptr));
-    std::cout << "Welcome to FanCurier. Creaza-ti un cont!" << std::endl;
-    std::cout << "Introduce-ti numele, adresa, nr de telefon si email-ul:\n";
-    Destinatar utilizator;
-    std::cin >> utilizator;
-    std::cout << "Utilizator creat cu succes:\n" << utilizator;
-    Colet package_box(package_content, 0, int(rand()), 0, utilizator);
-
+class FancurierApp {
 
     std::vector<Product> products{
         Product("casti audio", 10, 300, 1, 100),
@@ -276,56 +242,199 @@ int main() {
         Curier("0744444444","Domn Marcea",4,list_of_vans[3])
     };
 
-
-
-    while (loop) {
-        std::cout << "Choose an option: " << std::endl;
-        std::cout<<"1: Listeaza produsele"<<std::endl;
-        std::cout<<"2: Adauga produsul in cos"<<std::endl;
-        std::cout<<"3: Afiseaza informatii colet"<<std::endl;
-        std::cout<<"4: Trimite comanda"<<std::endl;
-        std::cout<<"5: Exit app"<<std::endl;
-        std::cin >> choose;
-        switch (choose) {
-            case 1: {
-                list_products(products);
-                break;
-            }
-            case 2: {
-                std::cout << "Alege ID-ul produsului dorit:";
-                std::cin >> id_product;
-                if (id_product > 0 and id_product <= int(products.size())) {
-                    Product &chosen_product = products[id_product - 1];
-                    package_box.add_item_into_box(chosen_product);
-                } else
-                    std::cout << "Id invalid";
-                break;
-            }
-            case 3: {
-                std::cout<<package_box;
-                break;
-            }
-            case 4: {
-                make_order(list_of_postmans);
-                std::cout << "Alege curierul dorit:";
-                std::cin >> id_postman;
-                if (id_postman > 0 and id_postman <= int(list_of_postmans.size())) {
-                    list_of_postmans[id_postman - 1].receive_box(package_box);
-                } else
-                    std::cout << "Id invalid";
-                break;
-            }
-            case 5: {
-                loop = false;
-                break;
-            }
-            default: {
-                std::cout<<"Optiune invalida ";
-                break;
-            }
+    void list_products() const {
+        std::cout << "Lista de produse disponibile astazi: " << std::endl;
+        for (const auto & product : products) {
+            std::cout << "ID: " << product.get_ID() << std::endl;
+            std::cout << "Nume produs: " << product.get_name() << std::endl;
+            std::cout << "Pret " << product.get_price() << " RON" << std::endl;
+            Product::stock_status(product);
         }
     }
 
+    void make_order() const {
+        std::cout<<"Curieri disponibili: "<<std::endl;
+        int id=1;
+        for (const auto & postman : list_of_postmans) {
+            std::cout<<"ID: "<<id<<std::endl;
+            std::cout<<"Nume: "<<postman.get_name()<<std::endl;
+            std::cout<<"Tier: "<<postman.get_tier()<<std::endl;
+            id++;
+        }
+    }
+
+
+    void admin_panel() {
+        bool admin_loop = true;
+        int choice;
+        while (admin_loop) {
+            std::cout << "Alege o optiune: "<<std::endl ;
+            std::cout << "1. Adauga produs nou" << std::endl;
+            std::cout << "2. Sterge produs" << std::endl;
+            std::cout << "3. Afiseaza toate produsele" << std::endl;
+            std::cout << "4. Inapoi la meniul principal" << std::endl;
+            std::cin >> choice;
+
+            switch (choice) {
+                case 1: {
+                    std::string name;
+                    int stock, weight, id, price;
+
+                    std::cout << "Nume produs: ";
+                    std::cin >> std::ws;
+                    std::getline(std::cin, name);
+
+                    std::cout << "Numar in stoc: "; std::cin >> stock;
+                    std::cout << "Greutate: "; std::cin >> weight;
+                    std::cout << "ID Produs: "; std::cin >> id;
+                    std::cout << "Pret: "; std::cin >> price;
+
+                    products.emplace_back(name, stock, weight, id, price);
+                    std::cout << "Produs adaugat cu succes!\n";
+                    break;
+                }
+                case 2: {
+                    int id_to_delete;
+                    std::cout << "Introdu ID-ul produsului de sters: ";
+                    std::cin >> id_to_delete;
+                    auto it = std::remove_if(products.begin(), products.end(),[id_to_delete](const Product& p) { return p.get_ID() == id_to_delete; });
+                    if (it != products.end()) {
+                        products.erase(it, products.end());
+                        std::cout << "Produs sters cu succes!\n";
+                    } else {
+                        std::cout << "Produsul cu acest ID nu exista.\n";
+                    }
+                    break;
+                }
+                case 3: {
+                    list_products();
+                    break;
+                }
+                case 4: {
+                    admin_loop = false;
+                    break;
+                }
+                default:
+                    std::cout << "Optiune invalida!\n";
+            }
+        }
+    };
+    void user_panel() {
+        bool loop = true;
+        srand(time(nullptr));
+        int choose, id_product,id_postman;
+        std::vector<std::string> package_content;
+         std::cout << "Introduce-ti numele, adresa, nr de telefon si email-ul:\n";
+            Destinatar utilizator;
+            std::cin >> utilizator;
+            std::cout << "Utilizator creat cu succes:\n" << utilizator;
+            Colet package_box(package_content, 0, int(rand()), 0, utilizator);
+            while (loop) {
+                std::cout << "Choose an option: " << std::endl;
+                std::cout<<"1: Listeaza produsele"<<std::endl;
+                std::cout<<"2: Adauga produsul in cos"<<std::endl;
+                std::cout<<"3: Afiseaza informatii colet"<<std::endl;
+                std::cout<<"4: Trimite comanda"<<std::endl;
+                std::cout<<"5: Exit app"<<std::endl;
+                std::cin >> choose;
+                switch (choose) {
+                    case 1: {
+                        list_products();
+                        break;
+                    }
+                    case 2: {
+                        std::cout << "Alege ID-ul produsului dorit:";
+                        std::cin >> id_product;
+                        auto it = std::find_if(products.begin(), products.end(), [id_product](const Product& p) { return p.get_ID() == id_product; });
+                        if (it != products.end()) {
+                            package_box.add_item_into_box(*it);
+                            std::cout << "Produs adaugat in cos!"<<std::endl;
+                        } else {
+                            std::cout << "ID invalid!"<<std::endl;
+                        }
+                        break;
+                    }
+                    case 3: {
+                        std::cout<<package_box;
+                        break;
+                    }
+                    case 4: {
+                        bool order=false;
+                        while (!order) {
+                            make_order();
+                            std::cout << "Alege curierul dorit:";
+                            std::cin >> id_postman;
+                            if (id_postman > 0 and id_postman <= int(list_of_postmans.size())) {
+                                order=list_of_postmans[id_postman - 1].receive_box(package_box);
+                            } else
+                                std::cout << "Id invalid";
+                        }
+                        break;
+                    }
+                    case 5: {
+                        loop = false;
+                        break;
+                    }
+                    default: {
+                        std::cout<<"Optiune invalida ";
+                        break;
+                    }
+                }
+            }
+        }
+
+
+
+public:
+    FancurierApp() =default;
+    FancurierApp(const std::vector<Product> &products, const std::vector<Duba> &list_of_vans,
+        const std::vector<Curier> &list_of_postmans, bool loop, int choose, int id_product, int id_postman,
+        int login_param, const std::vector<std::string> &package_content)
+        : products(products),
+          list_of_vans(list_of_vans),
+          list_of_postmans(list_of_postmans){}
+
+    void init() {
+        int login_param;
+        bool login_loop=true;
+        std::string password;
+        while (login_loop) {
+            std::cout << "Welcome to FanCurier. Creaza-ti un cont!" << std::endl;
+            std::cout<<"Alege:'\n' 1. Register '\n' 2. Admin Login '\n' 3. Exit"<<std::endl;
+            std::cin>>login_param;
+            switch (login_param) {
+                case 1:{
+                    user_panel();
+                    break;
+                }
+                case 2: {
+                    std::cout<<"Introdu Parola:"<<std::endl;
+                    std::cin>>password;
+                    if (password=="merepere") {  //just imagine i hash the password
+                        admin_panel();
+                    }
+                    else {
+                        std::cout<<"Access interzis."<<std::endl;
+                    }
+                    break;
+                }
+                case 3: {
+                    login_loop=false;
+                    break;
+                }
+                default: {
+                    std::cout<<"Optiune invalida ";
+                    break;
+                }
+            }
+        }
+    }
+};
+
+int main() {
+
+    FancurierApp app;
+    app.init();
     return 0;
 }
 

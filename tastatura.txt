@@ -1,15 +1,29 @@
-Mihai Viteazul
-Strada Unirii 1 Alba Iulia
-0722334455
-mihai@romania.ro
+2
+merepere
+1
+Tastatura Mecanica
+15
+800
+6
+450
+3
+2
+3
+3
+4
+1
+Ion Popescu
+Strada Florilor 12 Bucuresti
+0712345678
+ion.popescu@gmail.com
 1
 2
-1
+6
 2
 2
 3
 4
 1
-4
-2
+3
 5
+3
