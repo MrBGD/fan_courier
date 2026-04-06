@@ -38,6 +38,22 @@ public:
     [[nodiscard]] int get_ID() const { return ID; }
     [[nodiscard]] int get_price() const { return price; }
 
+    void set_name(const std::string &name) {
+        this->name = name;
+    }
+
+    void set_stock_number(int stock_number) {
+        this->stock_number = stock_number;
+    }
+
+    void set_weight(int weight) {
+        this->weight = weight;
+    }
+
+    void set_price(int price) {
+        this->price = price;
+    }
+
     void scade_stock() {
         if (stock_number > 0)
             stock_number--;
@@ -207,7 +223,7 @@ class Curier {
 public:
     Curier(std::string numar_telefon_curier, std::string nume_curier, int tier,Duba duba_curier) : phone_number(std::move(numar_telefon_curier)), name(std::move(nume_curier)),tier(tier), duba(std::move(duba_curier)) {}
 
-    bool receive_box(const Colet& package) {
+    [[nodiscard]] bool receive_box(const Colet& package) const {
         double multiplier = 1.0 + (duba.duba_tier() * 0.10);
         int actual_capacity = this->duba.get_max_capacity() * multiplier;
         if (package.package_price() > 2000 && this->tier <= 2) {
@@ -285,8 +301,9 @@ class FancurierApp {
             std::cout << "Alege o optiune: "<<std::endl ;
             std::cout << "1. Adauga produs nou" << std::endl;
             std::cout << "2. Sterge produs" << std::endl;
-            std::cout << "3. Afiseaza toate produsele" << std::endl;
-            std::cout << "4. Inapoi la meniul principal" << std::endl;
+            std::cout << "3. Editeaza produs\n" << std::endl;
+            std::cout << "4. Afiseaza toate produsele\n" << std::endl;
+            std::cout << "5. Inapoi la meniul principal\n" << std::endl;
             std::cin >> choice;
 
             switch (choice) {
@@ -321,10 +338,65 @@ class FancurierApp {
                     break;
                 }
                 case 3: {
+                    int id_to_edit;
+                    std::cout << "Introdu ID-ul produsului pe care vrei sa il editezi: ";
+                    std::cin >> id_to_edit;
+                    auto it = std::find_if(products.begin(), products.end(), [id_to_edit](const Product& p) { return p.get_ID() == id_to_edit; });
+                    if (it != products.end()) {
+                        int edit_choice;
+                        std::cout << "Alege atributul de modificat\n";
+                        std::cout << "1. Nume\n2. Stoc\n3. Greutate\n4. Pret\n";
+                        std::cout << "Alege optiunea: ";
+                        std::cin >> edit_choice;
+
+                        switch (edit_choice) {
+                            case 1: {
+                                std::string new_name;
+                                std::cout << "Introdu noul nume: ";
+                                std::cin >> std::ws;
+                                std::getline(std::cin, new_name);
+                                it->set_name(new_name);
+                                std::cout << "Nume actualizat!\n";
+                                break;
+                            }
+                            case 2: {
+                                int new_stock;
+                                std::cout << "Introdu noul stoc: ";
+                                std::cin >> new_stock;
+                                it->set_stock_number(new_stock);
+                                std::cout << "Stoc actualizat!\n";
+                                break;
+                            }
+                            case 3: {
+                                int new_weight;
+                                std::cout << "Introdu noua greutate: ";
+                                std::cin >> new_weight;
+                                it->set_weight(new_weight);
+                                std::cout << "Greutate actualizata!\n";
+                                break;
+                            }
+                            case 4: {
+                                int new_price;
+                                std::cout << "Introdu noul pret: ";
+                                std::cin >> new_price;
+                                it->set_price(new_price);
+                                std::cout << "Pret actualizat!\n";
+                                break;
+                            }
+                            default:
+                                std::cout << "Optiune invalida!\n";
+                        }
+                    } else {
+                        std::cout << "Produsul cu acest ID nu exista.\n";
+                    }
+                    break;
+                }
+
+                case 4: {
                     list_products();
                     break;
                 }
-                case 4: {
+                case 5: {
                     admin_loop = false;
                     break;
                 }
@@ -342,7 +414,7 @@ class FancurierApp {
             Destinatar utilizator;
             std::cin >> utilizator;
             std::cout << "Utilizator creat cu succes:\n" << utilizator;
-            Colet package_box(package_content, 0, int(rand()), 0, utilizator);
+            Colet package_box(package_content, 0, static_cast<int>(rand()), 0, utilizator);
             while (loop) {
                 std::cout << "\nChoose an option: " << std::endl;
                 std::cout << "1: Listeaza produsele" << std::endl;
@@ -395,7 +467,7 @@ class FancurierApp {
                             make_order();
                             std::cout << "Alege curierul dorit: ";
                             std::cin >> id_postman;
-                            if (id_postman > 0 && id_postman <= int(list_of_postmans.size())) {
+                            if (id_postman > 0 && id_postman <= static_cast<int>(list_of_postmans.size())) {
                                 order = list_of_postmans[id_postman - 1].receive_box(package_box);
                             } else {
                                 std::cout << "Id invalid\n";
@@ -419,12 +491,7 @@ class FancurierApp {
 
 public:
     FancurierApp() =default;
-    FancurierApp(const std::vector<Product> &products, const std::vector<Duba> &list_of_vans,
-        const std::vector<Curier> &list_of_postmans, bool loop, int choose, int id_product, int id_postman,
-        int login_param, const std::vector<std::string> &package_content)
-        : products(products),
-          list_of_vans(list_of_vans),
-          list_of_postmans(list_of_postmans){}
+
 
     void init() {
         int login_param;
