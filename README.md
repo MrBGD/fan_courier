@@ -1,3 +1,4 @@
-# Administration panel
+# FanCurier App
+## Tema 1
 
-A detailed panel for administrating the network traffic, analyze the packets and announce where there is suspicious traffic 
+A C++ console application that simulates an e-commerce and courier delivery system. It includes an interactive menu system separated into User and Admin panels, featuring cart management, stock tracking, and courier capacity logic.
