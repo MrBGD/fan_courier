@@ -38,20 +38,20 @@ public:
     [[nodiscard]] int get_ID() const { return ID; }
     [[nodiscard]] int get_price() const { return price; }
 
-    void set_name(const std::string &name) {
-        this->name = name;
+    void set_name(const std::string &new_name) {
+        name = new_name;
     }
 
-    void set_stock_number(int stock_number) {
-        this->stock_number = stock_number;
+    void set_stock_number(int new_stock_number) {
+        stock_number = new_stock_number;
     }
 
-    void set_weight(int weight) {
-        this->weight = weight;
+    void set_weight(int new_weight) {
+        weight = new_weight;
     }
 
-    void set_price(int price) {
-        this->price = price;
+    void set_price(int new_price) {
+        price = new_price;
     }
 
     void scade_stock() {
