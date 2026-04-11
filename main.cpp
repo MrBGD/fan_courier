@@ -4,6 +4,7 @@
 #include <utility>
 #include <vector>
 #include <algorithm>
+#include "ext/picosha2.h"
 
 class Product {
     std::string name;
@@ -37,6 +38,15 @@ public:
     [[nodiscard]] int get_weight() const { return weight; }
     [[nodiscard]] int get_ID() const { return ID; }
     [[nodiscard]] int get_price() const { return price; }
+
+    friend std::ostream &operator<<(std::ostream &os, const Product &product) {
+        os << "ID: " << product.ID
+           << " Nume: " << product.name
+           << " Pret: " << product.price
+           << " Greutate: " << product.weight
+           << " In stoc: " << product.stock_number;
+        return os;
+    }
 
     void set_name(const std::string &new_name) {
         name = new_name;
@@ -92,8 +102,7 @@ class Destinatar {
 
     static bool validate_email(const std::string &email) {
         //inspo https://clehaxze.tw/gemlog/2023/01-28-validate-email-address-using-regex-in-cpp.gmi
-        static const std::regex email_regex(
-            R"(^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$)");
+        static const std::regex email_regex(R"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)");
         std::smatch match;
         if (!std::regex_match(email, match, email_regex)) {
             std::cout << "Email invalid! \n Introdu un mail valid de tip: a@a.com! ";
@@ -144,13 +153,6 @@ class Colet {
     int weight;
     const int AWB;
     int price;
-
-public:
-    [[nodiscard]] int package_price() const {
-        return price;
-    }
-
-private:
     Destinatar destinatar;
 
 public:
@@ -158,18 +160,23 @@ public:
           Destinatar destinatar_colet) : content(std::move(box_content)), weight(box_weight), AWB(box_awb),
                                          price(box_price), destinatar(std::move(destinatar_colet)) {
     }
-
+    [[nodiscard]] int package_price() const {
+        return price;
+    }
     [[nodiscard]] int get_weight() const {
         return weight;
     }
 
     friend std::ostream &operator<<(std::ostream &os, const Colet &colet) {
-        for (const auto& item:colet.content)
-            os << "Content: " <<item<<std::endl;
-        os << "AWB: " << colet.AWB << std::endl;
-        os << "Weight: " << colet.weight << std::endl;
-        os << "Price: " << colet.price << std::endl;
-        os << "Date destinatar: " << colet.destinatar << std::endl;
+        os << "AWB: " << colet.AWB << "\n";
+        os << "Greutate: " << colet.weight << " kg\n";
+        os << "Pret Total: " << colet.price << " RON\n";
+        os << "Continut: ";
+        for (const auto& item : colet.content) {
+            os << item << "; ";
+        }
+        os << "\nDate Livrare\n";
+        os << colet.destinatar;
         return os;
     }
 
@@ -211,7 +218,12 @@ public:
     [[nodiscard]] int duba_tier() const {
         return tier;
     }
-
+    friend std::ostream &operator<<(std::ostream &os, const Duba &duba) {
+        os << "Duba: " << duba.numar_inmatriculare
+           << " Capacitate: " << duba.max_capacity
+           << " Tier: " << duba.tier;
+        return os;
+    }
 };
 
 class Curier {
@@ -247,6 +259,13 @@ public:
 
     [[nodiscard]] int get_tier() const {
         return tier;
+    }
+    friend std::ostream &operator<<(std::ostream &os, const Curier &curier) {
+        os << "Nume Curier: " << curier.name << "\n"
+           << "Telefon: " << curier.phone_number << "\n"
+           << "Tier: " << curier.tier << "\n"
+           << "Masina: " << curier.duba;
+        return os;
     }
 };
 
@@ -293,6 +312,11 @@ class FancurierApp {
         }
     }
 
+    static std::string hash_password(const std::string& password) {
+        std::string hash_hex_str;
+        picosha2::hash256_hex_string(password, hash_hex_str);
+        return hash_hex_str;
+    }
 
     void admin_panel() {
         bool admin_loop = true;
@@ -509,7 +533,8 @@ public:
                 case 2: {
                     std::cout<<"Introdu Parola:"<<std::endl;
                     std::cin>>password;
-                    if (password=="merepere") {  //just imagine i hash the password
+                    const std::string ADMIN_HASH = "2ec8e5414c6351fb9c23e9e82a2faca3015ef1938d0579cd8c43c8bc18efa02f";
+                    if (hash_password(password)==ADMIN_HASH) {
                         admin_panel();
                     }
                     else {
