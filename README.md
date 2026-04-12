@@ -16,3 +16,4 @@ Dynamic Couriers: Couriers have varying max weight capacities and tier levels (V
 
 ### Admin panel
 Inventory Management: Add new products, delete existing ones, or edit current stock variables (Name, Stock, Weight, Price).
+Admin password: ```merepere```
