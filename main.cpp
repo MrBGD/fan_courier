@@ -316,11 +316,11 @@ public:
 class FancurierApp {
 
     std::vector<Product> products{
-        Product("casti audio", 10, 1, 1, 100),
-        Product("masina de spalat", 1, 100, 2, 2000),
-        Product("cafea", 20, 0.5, 3, 40),
-        Product("deodorant", 30, 0.2, 4, 15),
-        Product("matura", 34, 0.2, 5, 10)
+        Product("casti audio", 10, 1.0f, 1, 100),
+        Product("masina de spalat", 1, 100.0f, 2, 2000),
+        Product("cafea", 20, 0.5f, 3, 40),
+        Product("deodorant", 30, 0.2f, 4, 15),
+        Product("matura", 34, 0.2f, 5, 10)
     };
     std::vector <Duba> list_of_vans{
         Duba("B111AAA",1000,1),
@@ -394,8 +394,8 @@ class FancurierApp {
             switch (choice) {
                 case 1: {
                     std::string name;
-                    int stock, weight, id, price;
-
+                    int stock, id, price;
+                    float weight;
                     std::cout << "Nume produs: ";
                     std::cin >> std::ws;
                     std::getline(std::cin, name);
