@@ -382,7 +382,6 @@ class FancurierApp {
 
     void admin_panel() {
         bool admin_loop = true;
-        int choice;
         while (admin_loop) {
             std::cout << "Alege o optiune: "<<std::endl ;
             std::cout << "1. Adauga produs nou" << std::endl;
@@ -390,7 +389,7 @@ class FancurierApp {
             std::cout << "3. Editeaza produs" << std::endl;
             std::cout << "4. Afiseaza toate produsele" << std::endl;
             std::cout << "5. Inapoi la meniul principal" << std::endl;
-            choice = safe_read();
+            int choice = safe_read();
 
             switch (choice) {
                 case 1: {
@@ -429,11 +428,10 @@ class FancurierApp {
                     std::cin >> id_to_edit;
                     auto it = std::find_if(products.begin(), products.end(), [id_to_edit](const Product& p) { return p.get_ID() == id_to_edit; });
                     if (it != products.end()) {
-                        int edit_choice;
                         std::cout << "Alege atributul de modificat\n";
                         std::cout << "1. Nume\n2. Stoc\n3. Greutate\n4. Pret\n";
                         std::cout << "Alege optiunea: ";
-                        edit_choice= safe_read();
+                        int edit_choice= safe_read();
 
                         switch (edit_choice) {
                             case 1: {
@@ -494,7 +492,7 @@ class FancurierApp {
     void user_panel() {
         bool loop = true;
         srand(time(nullptr));
-        int choose, id_product,id_postman;
+        int id_product,id_postman;
         std::vector<std::string> package_content;
          std::cout << "Introduce-ti numele, adresa, nr de telefon si email-ul:\n";
             Destinatar utilizator;
@@ -510,7 +508,7 @@ class FancurierApp {
                 std::cout << "5: Trimite comanda" << std::endl;
                 std::cout << "6: Istoric comenzi" << std::endl;
                 std::cout << "7: Exit app" << std::endl;
-                choose=safe_read();
+                int choose=safe_read();
 
                 switch (choose) {
                     case 1: {
@@ -555,8 +553,9 @@ class FancurierApp {
                             std::cout << "Alege curierul dorit: (0 pt anulare)";
                             std::cin >> id_postman;
                             if (id_postman==0) break;
-                            if (id_postman < 1 && id_postman > static_cast<int>(list_of_postmans.size())) {
+                            if (id_postman < 1 || id_postman > static_cast<int>(list_of_postmans.size())) {
                                 std::cout << "Id invalid\n";
+                                continue;
                             }
                             order = list_of_postmans[id_postman - 1].receive_box(package_box);
 
@@ -592,13 +591,12 @@ public:
 
 
     void init() {
-        int login_param;
         bool login_loop=true;
         std::string password;
         while (login_loop) {
             std::cout << "Welcome to FanCurier. Creaza-ti un cont!" << std::endl;
             std::cout<<"Alege:'\n' 1. Register '\n' 2. Admin Login '\n' 3. Exit"<<std::endl;
-            login_param=safe_read();
+            int login_param=safe_read();
             switch (login_param) {
                 case 1:{
                     user_panel();
