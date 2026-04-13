@@ -5,16 +5,54 @@
 #include <vector>
 #include <algorithm>
 #include "ext/picosha2.h"
+#include <limits>
+
+enum class OrderStatus { Procesare, InTransit, Livrat };
+
+struct Order {
+    int order_id;
+    std::string curier_name;
+    int total_price;
+    float total_weight;
+    OrderStatus status;
+    [[nodiscard]] std::string status_to_string() const {
+        switch (status) {
+            case OrderStatus::Procesare:  return "In procesare";
+            case OrderStatus::InTransit:  return "In transit";
+            case OrderStatus::Livrat:     return "Livrat";
+        }
+        return "Necunoscut";
+    }
+    void print() const {
+        std::cout << "Order ID    : " << order_id << "\n"
+                  << "Curier      : " << curier_name << "\n"
+                  << "Pret total  : " << total_price << " RON\n"
+                  << "Greutate    : " << total_weight << " kg\n"
+                  << "Status      : " << status_to_string() << "\n";
+    }
+};
+
+// inspo https://stackoverflow.com/questions/5864540/infinite-loop-with-cin-when-typing-string-while-a-number-is-expected
+static int safe_read() {
+    int val;
+    while (!(std::cin >> val)) {
+        std::cin.clear();
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        std::cout << "Input invalid, incearca din nou: ";
+    }
+    return val;
+}
+
 
 class Product {
     std::string name;
     int stock_number;
-    int weight;
+    float weight;
     int ID;
     int price;
 
 public:
-    Product(std::string product_name, int product_stock_number, int product_weight, int product_id,
+    Product(std::string product_name, int product_stock_number, float product_weight, int product_id,
             int product_price) : name(std::move(product_name)), stock_number(product_stock_number),
                                  weight(product_weight), ID(product_id), price(product_price) {
     }
@@ -35,7 +73,7 @@ public:
     ~Product() = default;
 
     [[nodiscard]] const std::string &get_name() const { return name; }
-    [[nodiscard]] int get_weight() const { return weight; }
+    [[nodiscard]] float get_weight() const { return weight; }
     [[nodiscard]] int get_ID() const { return ID; }
     [[nodiscard]] int get_price() const { return price; }
 
@@ -56,7 +94,7 @@ public:
         stock_number = new_stock_number;
     }
 
-    void set_weight(int new_weight) {
+    void set_weight(float new_weight) {
         weight = new_weight;
     }
 
@@ -71,18 +109,14 @@ public:
     void creste_stock() {
         stock_number++;
     }
-
-    static bool stock_status(const Product &product) {
-        if (product.stock_number > 1) {
-            std::cout << "In stoc!" << std::endl;
-            return true;
-        }
-        if (product.stock_number == 1) {
-            std::cout << "Un singur produs in stoc!";
-            return true;
-        }
-        std::cout << "Stoc epuizat!" << std::endl;
-        return false;
+    [[nodiscard]] static bool is_in_stock(const Product& p) { return p.stock_number > 0; }
+    static void print_stock_status(const Product& p) {
+        if (p.stock_number > 1)
+            std::cout << "In stoc!\n";
+        else if (p.stock_number == 1)
+            std::cout << "Un singur produs in stoc!\n";
+        else
+            std::cout << "Stoc epuizat!\n";
     }
 };
 
@@ -94,7 +128,7 @@ class Destinatar {
 
     static bool validate_phone_number(const std::string &nr_tel) {
         if (nr_tel.length() != 10 || nr_tel[0] != '0' || nr_tel[1] != '7') {
-            std::cout << "Nr de telefon invalid! ";
+            std::cout << "Nr de telefon invalid! \n";
             return false;
         }
         return true;
@@ -150,20 +184,20 @@ public:
 
 class Colet {
     std::vector<std::string> content;
-    int weight;
-    const int AWB;
+    float weight;
+    int AWB;
     int price;
     Destinatar destinatar;
 
 public:
-    Colet(std::vector<std::string> box_content, int box_weight, int box_awb, int box_price,
+    Colet(std::vector<std::string> box_content, float box_weight, int box_awb, int box_price,
           Destinatar destinatar_colet) : content(std::move(box_content)), weight(box_weight), AWB(box_awb),
                                          price(box_price), destinatar(std::move(destinatar_colet)) {
     }
     [[nodiscard]] int package_price() const {
         return price;
     }
-    [[nodiscard]] int get_weight() const {
+    [[nodiscard]] float get_weight() const {
         return weight;
     }
 
@@ -180,11 +214,16 @@ public:
         return os;
     }
 
-    void add_item_into_box(Product &chosen_product) {
+    bool add_item_into_box(Product &chosen_product) {
+        if (!Product::is_in_stock(chosen_product)) {
+            std::cout << "Produsul nu este in stoc!\n";
+            return false;
+        }
         this->price += chosen_product.get_price();
         this->weight += chosen_product.get_weight();
         this->content.push_back(chosen_product.get_name());
         chosen_product.scade_stock();
+        return true;
     }
     bool remove_item_from_box(Product &chosen_product) {
         auto it = std::find(content.begin(), content.end(), chosen_product.get_name());
@@ -197,7 +236,12 @@ public:
         }
         return false;
     }
-
+    void reset(int new_awb) {
+        content.clear();
+        weight = 0.0f;
+        price  = 0;
+        AWB    = new_awb;
+    }
 };
 
 class Duba {
@@ -237,7 +281,7 @@ public:
 
     [[nodiscard]] bool receive_box(const Colet& package) const {
         double multiplier = 1.0 + (duba.duba_tier() * 0.10);
-        int actual_capacity = this->duba.get_max_capacity() * multiplier;
+        double actual_capacity = this->duba.get_max_capacity() * multiplier;
         if (package.package_price() > 2000 && this->tier <= 2) {
             std::cout << "Eroare: Comenzile peste 2000 RON necesita un curier VIP (Tier 3+)!\n";
             return false;
@@ -272,11 +316,11 @@ public:
 class FancurierApp {
 
     std::vector<Product> products{
-        Product("casti audio", 10, 300, 1, 100),
-        Product("masina de spalat", 1, 1500, 2, 2000),
-        Product("cafea", 20, 500, 3, 40),
-        Product("deodorant", 30, 100, 4, 15),
-        Product("matura", 34, 200, 5, 10)
+        Product("casti audio", 10, 1, 1, 100),
+        Product("masina de spalat", 1, 100, 2, 2000),
+        Product("cafea", 20, 0.5, 3, 40),
+        Product("deodorant", 30, 0.2, 4, 15),
+        Product("matura", 34, 0.2, 5, 10)
     };
     std::vector <Duba> list_of_vans{
         Duba("B111AAA",1000,1),
@@ -290,18 +334,19 @@ class FancurierApp {
         Curier("0733333333","Adelin",3,list_of_vans[2]),
         Curier("0744444444","Domn Marcea",4,list_of_vans[3])
     };
-
+    std::vector<Order> order_history;
+    int next_order_id = 1000;
     void list_products() const {
         std::cout << "Lista de produse disponibile astazi: " << std::endl;
         for (const auto & product : products) {
             std::cout << "ID: " << product.get_ID() << std::endl;
             std::cout << "Nume produs: " << product.get_name() << std::endl;
             std::cout << "Pret " << product.get_price() << " RON" << std::endl;
-            Product::stock_status(product);
+            Product::print_stock_status(product);
         }
     }
 
-    void make_order() const {
+    void list_postmans() const {
         std::cout<<"Curieri disponibili: "<<std::endl;
         int id=1;
         for (const auto & postman : list_of_postmans) {
@@ -310,6 +355,23 @@ class FancurierApp {
             std::cout<<"Tier: "<<postman.get_tier()<<std::endl;
             id++;
         }
+    }
+    void order_statuses() {
+        for (auto& order : order_history) {
+            if(order.status == OrderStatus::Procesare)
+                order.status = OrderStatus::InTransit;
+            else if (order.status == OrderStatus::InTransit)
+                order.status = OrderStatus::Livrat;
+        }
+    }
+    void view_order_history() {
+        if (order_history.empty()) {
+            std::cout << "Nu ai comenzi plasate inca.\n";
+            return;
+            }
+        order_statuses();
+        std::cout << "\nIstoricul comenzilor\n";
+        for (const auto& order : order_history) order.print();
     }
 
     static std::string hash_password(const std::string& password) {
@@ -325,10 +387,10 @@ class FancurierApp {
             std::cout << "Alege o optiune: "<<std::endl ;
             std::cout << "1. Adauga produs nou" << std::endl;
             std::cout << "2. Sterge produs" << std::endl;
-            std::cout << "3. Editeaza produs\n" << std::endl;
-            std::cout << "4. Afiseaza toate produsele\n" << std::endl;
-            std::cout << "5. Inapoi la meniul principal\n" << std::endl;
-            std::cin >> choice;
+            std::cout << "3. Editeaza produs" << std::endl;
+            std::cout << "4. Afiseaza toate produsele" << std::endl;
+            std::cout << "5. Inapoi la meniul principal" << std::endl;
+            choice = safe_read();
 
             switch (choice) {
                 case 1: {
@@ -371,7 +433,7 @@ class FancurierApp {
                         std::cout << "Alege atributul de modificat\n";
                         std::cout << "1. Nume\n2. Stoc\n3. Greutate\n4. Pret\n";
                         std::cout << "Alege optiunea: ";
-                        std::cin >> edit_choice;
+                        edit_choice= safe_read();
 
                         switch (edit_choice) {
                             case 1: {
@@ -392,7 +454,7 @@ class FancurierApp {
                                 break;
                             }
                             case 3: {
-                                int new_weight;
+                                float new_weight;
                                 std::cout << "Introdu noua greutate: ";
                                 std::cin >> new_weight;
                                 it->set_weight(new_weight);
@@ -446,8 +508,9 @@ class FancurierApp {
                 std::cout << "3: Sterge produs din cos" << std::endl;
                 std::cout << "4: Afiseaza informatii colet" << std::endl;
                 std::cout << "5: Trimite comanda" << std::endl;
-                std::cout << "6: Exit app" << std::endl;
-                std::cin >> choose;
+                std::cout << "6: Istoric comenzi" << std::endl;
+                std::cout << "7: Exit app" << std::endl;
+                choose=safe_read();
 
                 switch (choose) {
                     case 1: {
@@ -459,8 +522,8 @@ class FancurierApp {
                         std::cin >> id_product;
                         auto it = std::find_if(products.begin(), products.end(), [id_product](const Product& p) { return p.get_ID() == id_product; });
                         if (it != products.end()) {
-                            package_box.add_item_into_box(*it);
-                            std::cout << "Produs adaugat in cos!" << std::endl;
+                            if (package_box.add_item_into_box(*it))
+                                std::cout << "Produs adaugat in cos!" << std::endl;
                         } else {
                             std::cout << "ID invalid!" << std::endl;
                         }
@@ -488,18 +551,29 @@ class FancurierApp {
                     case 5: {
                         bool order = false;
                         while (!order) {
-                            make_order();
-                            std::cout << "Alege curierul dorit: ";
+                            list_postmans();
+                            std::cout << "Alege curierul dorit: (0 pt anulare)";
                             std::cin >> id_postman;
-                            if (id_postman > 0 && id_postman <= static_cast<int>(list_of_postmans.size())) {
-                                order = list_of_postmans[id_postman - 1].receive_box(package_box);
-                            } else {
+                            if (id_postman==0) break;
+                            if (id_postman < 1 && id_postman > static_cast<int>(list_of_postmans.size())) {
                                 std::cout << "Id invalid\n";
+                            }
+                            order = list_of_postmans[id_postman - 1].receive_box(package_box);
+
+                            if (order) {
+                                order_history.push_back({ next_order_id++, list_of_postmans[id_postman - 1].get_name(), package_box.package_price(), package_box.get_weight(), OrderStatus::Procesare });
+                                std::cout << "Comanda #" << (next_order_id - 1) << " plasata cu succes!\n";
+                                package_box.reset(static_cast<int>(rand()));
                             }
                         }
                         break;
                     }
                     case 6: {
+                        view_order_history();
+                        break;
+                    }
+
+                    case 7: {
                         loop = false;
                         break;
                     }
@@ -524,7 +598,7 @@ public:
         while (login_loop) {
             std::cout << "Welcome to FanCurier. Creaza-ti un cont!" << std::endl;
             std::cout<<"Alege:'\n' 1. Register '\n' 2. Admin Login '\n' 3. Exit"<<std::endl;
-            std::cin>>login_param;
+            login_param=safe_read();
             switch (login_param) {
                 case 1:{
                     user_panel();

@@ -3,7 +3,7 @@ merepere
 1
 Tastatura Mecanica
 15
-800
+0.8
 6
 450
 3
@@ -26,4 +26,5 @@ ion.popescu@gmail.com
 5
 3
 6
+7
 3
