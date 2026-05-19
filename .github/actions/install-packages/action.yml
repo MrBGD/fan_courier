@@ -11,7 +11,7 @@ runs:
       run: |
         sudo apt-get update
         sudo apt-get install ninja-build
-        bash ./scripts/install_linux_packages.sh
+        bash ./scripts/install_linux_deps.sh
 
     - name: Install common macOS Dependencies
       if: runner.os == 'macOS'
