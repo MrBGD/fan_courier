@@ -11,6 +11,7 @@ runs:
       run: |
         sudo apt-get update
         sudo apt-get install ninja-build
+        bash ./scripts/install_linux_packages.sh
 
     - name: Install valgrind
       shell: bash

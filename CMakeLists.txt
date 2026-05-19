@@ -22,27 +22,66 @@ include(cmake/CopyHelper.cmake)
 ###############################################################################
 
 # external dependencies with FetchContent
-# include(FetchContent)
-#
-# set(FETCHCONTENT_QUIET OFF CACHE INTERNAL "Override verbose output" FORCE)
-# set(FETCHCONTENT_UPDATES_DISCONNECTED ON CACHE INTERNAL "Override update strategy" FORCE)
-#
+include(FetchContent)
+
+set(FETCHCONTENT_QUIET OFF CACHE INTERNAL "Override verbose output" FORCE)
+set(FETCHCONTENT_UPDATES_DISCONNECTED ON CACHE INTERNAL "Override update strategy" FORCE)
+
 # NOTE: Also update env vars used for caching in
 #     - .github/actions/configure-cmake/action.yml
 #     - .github/workflows/cmake.yml
-# FetchContent_Declare(
-#     SomeLib
-#     GIT_REPOSITORY https://github.com/<SomeUser>/<SomeLib>.git
-#     GIT_TAG        <some_git_hash> # <which tag/branch @ <some_date>>
-#     GIT_SHALLOW    1  # works only with branches or tags, not with arbitrary commit hashes
-#     GIT_PROGRESS   ON
-# )
-#
-# FetchContent_MakeAvailable(SomeLib)
+FetchContent_Declare(
+    PcapPlusPlus
+    GIT_REPOSITORY https://github.com/seladb/PcapPlusPlus.git
+    GIT_TAG        v25.05 # <which tag/branch @ <some_date>>
+    GIT_SHALLOW    1  # works only with branches or tags, not with arbitrary commit hashes
+    GIT_PROGRESS   ON
+)
+
+# Optimize PcapPlusPlus compilation by disabling tools/examples you don't need
+set(PCAPPP_BUILD_EXAMPLES OFF CACHE INTERNAL "")
+set(PCAPPP_BUILD_TUTORIALS OFF CACHE INTERNAL "")
+
+FetchContent_MakeAvailable(PcapPlusPlus)
 
 ###############################################################################
 
 # external dependencies with find_package
+
+if(WIN32)
+    message(STATUS "Configuring Windows Environment (Fetching WinDivert)...")
+    
+    # We fetch the pre-compiled binary release of WinDivert because compiling 
+    # a kernel-level driver (.sys) inside a standard user CMake pipeline is heavily restricted.
+    FetchContent_Declare(
+        windivert_bin
+        URL      https://github.com/basil00/WinDivert/releases/download/v2.2.2/WinDivert-2.2.2-A.zip
+        URL_HASH SHA256=170db79f3246ebec5ef0d9f4a56a6552a4ef6e61f2215c0e1db5c105085e7ba1 # Verification hash
+    )
+    FetchContent_MakeAvailable(windivert_bin)
+    
+    # Extract the paths to the unzipped binaries
+    set(WINDIVERT_INCLUDE_DIR "${windivert_bin_SOURCE_DIR}/include")
+    
+    # Select x64 or x86 depending on target architecture
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set(WINDIVERT_BIN_DIR "${windivert_bin_SOURCE_DIR}/x64")
+    else()
+        set(WINDIVERT_BIN_DIR "${windivert_bin_SOURCE_DIR}/x86")
+    endif()
+    
+    # Locate the static import library (.lib) for linking
+    find_library(WINDIVERT_LIB NAMES WinDivert PATHS ${WINDIVERT_BIN_DIR} NO_DEFAULT_PATH)
+
+else()
+    message(STATUS "Configuring Unix Environment (Locating libpcap)...")
+    
+    # Linux/macOS require the system's development headers for PCAP.
+    # Note: On CI runners (like GitHub Actions), you'll want a quick step to install it:
+    # Linux: apt-get install libpcap-dev  |  macOS: built-in or brew install libpcap
+    find_package(Pcap REQUIRED)
+endif()
+
 
 # find_package(Threads REQUIRED)
 
@@ -75,7 +114,32 @@ target_include_directories(${MAIN_EXECUTABLE_NAME} SYSTEM PRIVATE
 )
 # target_include_directories(${MAIN_EXECUTABLE_NAME} SYSTEM PRIVATE ${<SomeLib>_SOURCE_DIR}/include)
 # target_link_directories(${MAIN_EXECUTABLE_NAME} PRIVATE ${<SomeLib>_BINARY_DIR}/lib)
-# target_link_libraries(${MAIN_EXECUTABLE_NAME} <SomeLib>)
+target_link_libraries(${MAIN_EXECUTABLE_NAME} PRIVATE
+    Pcap++
+    Packet++
+    Common++
+)
+
+# Apply platform-specific linkage
+if(WIN32)
+    target_include_directories(${PROJECT_NAME} PRIVATE ${WINDIVERT_INCLUDE_DIR})
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${WINDIVERT_LIB})
+    
+    # --- CRITICAL WINDOWS CI AUTOMATION STEP ---
+    # Automatically copy WinDivert.dll and WinDivert64.sys to your build folder 
+    # so your tests can run seamlessly without throwing runtime missing-dll errors.
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${WINDIVERT_BIN_DIR}/WinDivert.dll"
+            "$<TARGET_FILE_DIR:${PROJECT_NAME}>/WinDivert.dll"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${WINDIVERT_BIN_DIR}/WinDivert64.sys"
+            "$<TARGET_FILE_DIR:${PROJECT_NAME}>/WinDivert64.sys"
+        COMMENT "Deploying WinDivert drivers to output directory for local execution"
+    )
+else()
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${PCAP_LIBRARY})
+endif()
 
 ###############################################################################
 
