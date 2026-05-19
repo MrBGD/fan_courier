@@ -30,58 +30,30 @@ set(FETCHCONTENT_UPDATES_DISCONNECTED ON CACHE INTERNAL "Override update strateg
 # NOTE: Also update env vars used for caching in
 #     - .github/actions/configure-cmake/action.yml
 #     - .github/workflows/cmake.yml
-FetchContent_Declare(
-    PcapPlusPlus
-    GIT_REPOSITORY https://github.com/seladb/PcapPlusPlus.git
-    GIT_TAG        v25.05 # <which tag/branch @ <some_date>>
-    GIT_SHALLOW    1  # works only with branches or tags, not with arbitrary commit hashes
-    GIT_PROGRESS   ON
-)
+if(UNIX)
+    if(APPLE)
+        find_package(PcapPlusPlus)
+    else()
+        FetchContent_Declare(
+            PcapPlusPlus
+            GIT_REPOSITORY https://github.com/seladb/PcapPlusPlus.git
+            GIT_TAG        v25.05 # <which tag/branch @ <some_date>>
+            GIT_SHALLOW    1  # works only with branches or tags, not with arbitrary commit hashes
+            GIT_PROGRESS   ON
+        )
+        # Optimize PcapPlusPlus compilation by disabling tools/examples you don't need
+        set(PCAPPP_BUILD_EXAMPLES OFF CACHE INTERNAL "")
+        set(PCAPPP_BUILD_TUTORIALS OFF CACHE INTERNAL "")
 
-# Optimize PcapPlusPlus compilation by disabling tools/examples you don't need
-set(PCAPPP_BUILD_EXAMPLES OFF CACHE INTERNAL "")
-set(PCAPPP_BUILD_TUTORIALS OFF CACHE INTERNAL "")
-
-FetchContent_MakeAvailable(PcapPlusPlus)
+        FetchContent_MakeAvailable(PcapPlusPlus)
+    endif()
+else()
+    find_package(PcapPlusPlus)
+endif()
 
 ###############################################################################
 
 # external dependencies with find_package
-
-if(WIN32)
-    message(STATUS "Configuring Windows Environment (Fetching WinDivert)...")
-    
-    # We fetch the pre-compiled binary release of WinDivert because compiling 
-    # a kernel-level driver (.sys) inside a standard user CMake pipeline is heavily restricted.
-    FetchContent_Declare(
-        windivert_bin
-        URL      https://github.com/basil00/WinDivert/releases/download/v2.2.2/WinDivert-2.2.2-A.zip
-        URL_HASH SHA256=170db79f3246ebec5ef0d9f4a56a6552a4ef6e61f2215c0e1db5c105085e7ba1 # Verification hash
-    )
-    FetchContent_MakeAvailable(windivert_bin)
-    
-    # Extract the paths to the unzipped binaries
-    set(WINDIVERT_INCLUDE_DIR "${windivert_bin_SOURCE_DIR}/include")
-    
-    # Select x64 or x86 depending on target architecture
-    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-        set(WINDIVERT_BIN_DIR "${windivert_bin_SOURCE_DIR}/x64")
-    else()
-        set(WINDIVERT_BIN_DIR "${windivert_bin_SOURCE_DIR}/x86")
-    endif()
-    
-    # Locate the static import library (.lib) for linking
-    find_library(WINDIVERT_LIB NAMES WinDivert PATHS ${WINDIVERT_BIN_DIR} NO_DEFAULT_PATH)
-
-else()
-    message(STATUS "Configuring Unix Environment (Locating libpcap)...")
-    
-    # Linux/macOS require the system's development headers for PCAP.
-    # Note: On CI runners (like GitHub Actions), you'll want a quick step to install it:
-    # Linux: apt-get install libpcap-dev  |  macOS: built-in or brew install libpcap
-    find_package(Pcap REQUIRED)
-endif()
-
 
 # find_package(Threads REQUIRED)
 

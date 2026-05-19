@@ -13,6 +13,18 @@ runs:
         sudo apt-get install ninja-build
         bash ./scripts/install_linux_packages.sh
 
+    - name: Install common macOS Dependencies
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        brew install pcapplusplus
+
+    - name: Install common Windows Dependencies
+      if: runner.os == 'Windows'
+      shell: bash
+      run: |
+        vcpkg install pcapplusplus
+
     - name: Install valgrind
       shell: bash
       if: runner.os == 'Linux' && matrix.runs_valgrind == true
