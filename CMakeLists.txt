@@ -31,22 +31,22 @@ set(FETCHCONTENT_UPDATES_DISCONNECTED ON CACHE INTERNAL "Override update strateg
 #     - .github/actions/configure-cmake/action.yml
 #     - .github/workflows/cmake.yml
 if(UNIX)
-    if(APPLE)
-        find_package(PcapPlusPlus)
-    else()
-        FetchContent_Declare(
-            PcapPlusPlus
-            GIT_REPOSITORY https://github.com/seladb/PcapPlusPlus.git
-            GIT_TAG        v25.05 # <which tag/branch @ <some_date>>
-            GIT_SHALLOW    1  # works only with branches or tags, not with arbitrary commit hashes
-            GIT_PROGRESS   ON
-        )
-        # Optimize PcapPlusPlus compilation by disabling tools/examples you don't need
-        set(PCAPPP_BUILD_EXAMPLES OFF CACHE INTERNAL "")
-        set(PCAPPP_BUILD_TUTORIALS OFF CACHE INTERNAL "")
+    #if(APPLE)
+    #    find_package(PcapPlusPlus)
+    #else()
+    FetchContent_Declare(
+        PcapPlusPlus
+        GIT_REPOSITORY https://github.com/seladb/PcapPlusPlus.git
+        GIT_TAG        v25.05 # <which tag/branch @ <some_date>>
+        GIT_SHALLOW    1  # works only with branches or tags, not with arbitrary commit hashes
+        GIT_PROGRESS   ON
+    )
+    # Optimize PcapPlusPlus compilation by disabling tools/examples you don't need
+    set(PCAPPP_BUILD_EXAMPLES OFF CACHE INTERNAL "")
+    set(PCAPPP_BUILD_TUTORIALS OFF CACHE INTERNAL "")
 
-        FetchContent_MakeAvailable(PcapPlusPlus)
-    endif()
+    FetchContent_MakeAvailable(PcapPlusPlus)
+    #endif()
 else()
     find_package(PcapPlusPlus)
 endif()
@@ -87,9 +87,9 @@ target_include_directories(${MAIN_EXECUTABLE_NAME} SYSTEM PRIVATE
 # target_include_directories(${MAIN_EXECUTABLE_NAME} SYSTEM PRIVATE ${<SomeLib>_SOURCE_DIR}/include)
 # target_link_directories(${MAIN_EXECUTABLE_NAME} PRIVATE ${<SomeLib>_BINARY_DIR}/lib)
 
-if(TARGET PCapPlusPlus::Pcap++)
+if(WIN32)
     target_link_libraries(${MAIN_EXECUTABLE_NAME} PRIVATE
-        PcapPlusPlus::Pcap++ PcapPlusPlus::Common++
+         PCAP::PCAP Packet::Packet PcapPlusPlus::Pcap++ PcapPlusPlus::Common++
     )
 else()
     target_link_libraries(${MAIN_EXECUTABLE_NAME} PRIVATE

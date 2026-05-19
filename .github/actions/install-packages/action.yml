@@ -17,7 +17,7 @@ runs:
       if: runner.os == 'macOS'
       shell: bash
       run: |
-        brew install pcapplusplus
+        brew install ccache tcpreplay
 
     - name: Install common Windows Dependencies
       if: runner.os == 'Windows'
