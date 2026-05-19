@@ -86,11 +86,16 @@ target_include_directories(${MAIN_EXECUTABLE_NAME} SYSTEM PRIVATE
 )
 # target_include_directories(${MAIN_EXECUTABLE_NAME} SYSTEM PRIVATE ${<SomeLib>_SOURCE_DIR}/include)
 # target_link_directories(${MAIN_EXECUTABLE_NAME} PRIVATE ${<SomeLib>_BINARY_DIR}/lib)
-target_link_libraries(${MAIN_EXECUTABLE_NAME} PRIVATE
-    Pcap++
-    Packet++
-    Common++
-)
+
+if(TARGET PCapPlusPlus::Pcap++)
+    target_link_libraries(${MAIN_EXECUTABLE_NAME} PRIVATE
+        PcapPlusPlus::Pcap++ PcapPlusPlus::Common++
+    )
+else()
+    target_link_libraries(${MAIN_EXECUTABLE_NAME} PRIVATE
+        Pcap++ Common++
+    )
+endif()
 
 # Apply platform-specific linkage
 if(WIN32)
