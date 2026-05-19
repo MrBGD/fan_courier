@@ -9,6 +9,7 @@ runs:
       run: |
         sudo apt-get update
         sudo apt-get install --no-install-recommends clang-tidy-${{ env.CLANG_VER }} libc++-${{ env.CLANG_VER }}-dev libc++abi-${{ env.CLANG_VER }}-dev ninja-build
+        bash ./scripts/install_linux_deps.sh
 
     - name: Configure CMake
       uses: ./.github/actions/configure-cmake
