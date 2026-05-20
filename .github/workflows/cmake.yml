@@ -206,7 +206,7 @@ jobs:
         uses: ./.github/actions/install-packages
 
       - name: Set CI environment for Windows (mock npcap)
-        if: runner.os == 'Windows' && matrix.env_npcap_ci
+        if: runner.os == 'Windows'
         run: |
           echo "BUILDING_FOR_CI=1" >> ${GITHUB_ENV}
           echo "Using mock npcap SDK for CI builds"

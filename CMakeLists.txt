@@ -70,8 +70,14 @@ else()
     # Set paths to extracted binaries
     set(PCPP_ROOT "${pcapplusplus_SOURCE_DIR}")
     # The archive extracts to a subdirectory named after the archive
+    # Find the actual subdirectory (handle both single and multiple subdirs)
     file(GLOB PCPP_SUBDIRS "${pcapplusplus_SOURCE_DIR}/pcapplusplus-*")
-    list(GET PCPP_SUBDIRS 0 PCPP_SUBDIR)
+    if(PCPP_SUBDIRS)
+        list(GET PCPP_SUBDIRS 0 PCPP_SUBDIR)
+    else()
+        # Fallback: use the source directory directly if glob fails
+        set(PCPP_SUBDIR "${pcapplusplus_SOURCE_DIR}")
+    endif()
     set(PCPP_CMAKE_DIR "${PCPP_SUBDIR}/lib/cmake/pcapplusplus")
 
     # Include the pre-built CMake config files (these define PcapPlusPlus::Pcap++ etc.)
