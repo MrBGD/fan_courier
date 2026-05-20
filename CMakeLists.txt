@@ -49,26 +49,24 @@ if(UNIX)
     #endif()
 else()
     if(MINGW)
-        set(PCPP_URL "https://github.com/seladb/PcapPlusPlus/releases/download/v25.05/pcapplusplus-25.05-windows-mingw64-x86_64-gcc-15.1.0.zip")
+        # Notice the $<SEMICOLON> replacing the raw semicolon in v25.05
+        set(PCPP_URL "https://github.com/seladb/PcapPlusPlus/releases/download/v25$<SEMICOLON>05/pcapplusplus-25.05-windows-mingw64-x86_64-gcc-15.1.0.zip")
         set(PCPP_SUBDIR "pcapplusplus-25.05-windows-mingw64-x86_64-gcc-15.1.0")
     elseif(MSVC)
-        # Check if we are building in Debug or Release mode to choose the matching MSVC asset
         if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-            set(PCPP_URL "https://github.com/seladb/PcapPlusPlus/releases/download/v25.05/pcapplusplus-25.05-windows-vs2022-x64-debug.zip")
+            set(PCPP_URL "https://github.com/seladb/PcapPlusPlus/releases/download/v25$<SEMICOLON>05/pcapplusplus-25.05-windows-vs2022-x64-debug.zip")
             set(PCPP_SUBDIR "pcapplusplus-25.05-windows-vs2022-x64-debug")
         else()
-            set(PCPP_URL "https://github.com/seladb/PcapPlusPlus/releases/download/v25.05/pcapplusplus-25.05-windows-vs2022-x64-release.zip")
+            set(PCPP_URL "https://github.com/seladb/PcapPlusPlus/releases/download/v25$<SEMICOLON>05/pcapplusplus-25.05-windows-vs2022-x64-release.zip")
             set(PCPP_SUBDIR "pcapplusplus-25.05-windows-vs2022-x64-release")
         endif()
-    else()
-        message(FATAL_ERROR "Unsupported toolchain. This configuration only supports MinGW or MSVC.")
     endif()
 
     # 2. Declare and Populate the content using FetchContent
     FetchContent_Declare(
         pcapplusplus
-        URL "${PCPP_URL}"
         DOWNLOAD_ONLY TRUE
+        URL "${PCPP_URL}"
     )
 
     FetchContent_MakeAvailable(pcapplusplus)
