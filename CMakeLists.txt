@@ -67,7 +67,7 @@ else()
     # 2. Declare and Populate the content using FetchContent
     FetchContent_Declare(
         pcapplusplus
-        URL ${PCPP_URL}
+        URL "${PCPP_URL}"
         DOWNLOAD_ONLY TRUE
     )
 
