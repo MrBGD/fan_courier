@@ -16,6 +16,61 @@ typedef struct pcap_dumper pcap_dumper_t;
 typedef struct pcap_if pcap_if_t;
 typedef struct pcap_addr pcap_addr_t;
 typedef int bpf_u_int32;
+typedef unsigned char u_char;
+typedef unsigned short u_short;
+typedef unsigned int u_int;
+
+#define PCAP_ERRBUF_SIZE 256
+#define DLT_EN10MB 1
+
+struct timeval {
+    long tv_sec;
+    long tv_usec;
+};
+
+struct pcap_pkthdr {
+    struct timeval ts;
+    bpf_u_int32 caplen;
+    bpf_u_int32 len;
+};
+
+struct pcap_stat {
+    u_int ps_recv;
+    u_int ps_drop;
+    u_int ps_ifdrop;
+};
+
+struct pcap_rmtauth {
+    int type;
+    char *username;
+    char *password;
+};
+
+struct pcap_send_queue {
+    u_int len;
+    u_int maxlen;
+    u_char *buffer;
+};
+
+struct bpf_stat {
+    u_int bs_recv;
+    u_int bs_drop;
+};
+
+typedef void (*pcap_handler)(u_char *user, const struct pcap_pkthdr *h, const u_char *sp);
+
+enum pcap_direction {
+    PCAP_D_INOUT = 0,
+    PCAP_D_IN = 1,
+    PCAP_D_OUT = 2,
+    PCAP_D_INOUT_NOTED = 3
+};
+
+enum mode {
+    MODE_CAPTURE = 0,
+    MODE_STATISTICS = 1,
+    MODE_MONITOR = 2
+};
 
 struct bpf_program {
     int bf_len;
