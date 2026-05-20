@@ -176,6 +176,8 @@ jobs:
             name: "Windows 2022 MinGW GCC 13"
             cmake_flags: "-DBUILD_SHARED_LIBS=ON"
             cmake_generator: Ninja
+            # Use mock npcap SDK for CI builds (real SDK cannot be redistributed)
+            env_npcap_ci: "1"
 
     steps:
       - name: Checkout repo
@@ -202,6 +204,12 @@ jobs:
 
       - name: Install packages
         uses: ./.github/actions/install-packages
+
+      - name: Set CI environment for Windows (mock npcap)
+        if: runner.os == 'Windows' && matrix.env_npcap_ci
+        run: |
+          echo "BUILDING_FOR_CI=1" >> ${GITHUB_ENV}
+          echo "Using mock npcap SDK for CI builds"
 
       - name: Configure CMake
         uses: ./.github/actions/configure-cmake

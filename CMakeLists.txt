@@ -48,51 +48,94 @@ if(UNIX)
     FetchContent_MakeAvailable(PcapPlusPlus)
     #endif()
 else()
+    # Windows: use pre-built PcapPlusPlus binaries
     if(MINGW)
-        # Notice the $<SEMICOLON> replacing the raw semicolon in v25.05
         set(PCPP_URL "https://github.com/seladb/PcapPlusPlus/releases/download/v25.05/pcapplusplus-25.05-windows-mingw64-x86_64-gcc-15.1.0.zip")
-        set(PCPP_SUBDIR "pcapplusplus-25.05-windows-mingw64-x86_64-gcc-15.1.0")
     elseif(MSVC)
         if(CMAKE_BUILD_TYPE STREQUAL "Debug")
             set(PCPP_URL "https://github.com/seladb/PcapPlusPlus/releases/download/v25.05/pcapplusplus-25.05-windows-vs2022-x64-debug.zip")
-            set(PCPP_SUBDIR "pcapplusplus-25.05-windows-vs2022-x64-debug")
         else()
             set(PCPP_URL "https://github.com/seladb/PcapPlusPlus/releases/download/v25.05/pcapplusplus-25.05-windows-vs2022-x64-release.zip")
-            set(PCPP_SUBDIR "pcapplusplus-25.05-windows-vs2022-x64-release")
         endif()
     endif()
 
-    # 2. Declare and Populate the content using FetchContent
+    # Download and extract pre-built binaries
     FetchContent_Declare(
         pcapplusplus
         DOWNLOAD_ONLY TRUE
         URL "${PCPP_URL}"
     )
-
     FetchContent_MakeAvailable(pcapplusplus)
 
-    # 3. Create interface/imported targets to map the downloaded binaries
-    # Note: PcapPlusPlus relies on Common++, Packet++, and Pcap++
-    set(PCPP_ROOT "${pcapplusplus_SOURCE_DIR}/${PCPP_SUBDIR}")
-    set(PCPP_INCLUDE_DIR "${PCPP_ROOT}/include/pcapplusplus")
-    set(PCPP_LIB_DIR "${PCPP_ROOT}/lib")
+    # Set paths to extracted binaries
+    set(PCPP_ROOT "${pcapplusplus_SOURCE_DIR}")
+    # The archive extracts to a subdirectory named after the archive
+    file(GLOB PCPP_SUBDIRS "${pcapplusplus_SOURCE_DIR}/pcapplusplus-*")
+    list(GET PCPP_SUBDIRS 0 PCPP_SUBDIR)
+    set(PCPP_CMAKE_DIR "${PCPP_SUBDIR}/lib/cmake/pcapplusplus")
 
-    # Helper function to define imported static libraries
-    function(add_pcpp_library TARGET_NAME LIB_FILE_NAME)
-        add_library(${TARGET_NAME} STATIC IMPORTED GLOBAL)
-        set_target_properties(${TARGET_NAME} PROPERTIES
-            INTERFACE_INCLUDE_DIRECTORIES "${PCPP_INCLUDE_DIR}"
-            IMPORTED_LOCATION "${PCPP_LIB_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}${LIB_FILE_NAME}${CMAKE_STATIC_LIBRARY_SUFFIX}"
-        )
-    endfunction()
+    # Include the pre-built CMake config files (these define PcapPlusPlus::Pcap++ etc.)
+    include("${PCPP_CMAKE_DIR}/PcapPlusPlusConfig.cmake")
 
-    # Define the three PcapPlusPlus libraries
-    add_pcpp_library(PcapPlusPlus::Common++ "Common++")
-    add_pcpp_library(PcapPlusPlus::Packet++ "Packet++")
-    add_pcpp_library(PcapPlusPlus::Pcap++ "Pcap++")
+    # --- Provide PCAP::PCAP and Packet::Packet targets ---
+    # These are required by PcapPlusPlus but come from the npcap SDK.
+    # For CI builds: use mock libraries.
+    # For release builds: use the real npcap SDK.
+    if(NOT TARGET PCAP::PCAP)
+        if(DEFINED ENV{BUILDING_FOR_CI} OR NPCAP_SDK_PATH STREQUAL "")
+            # CI build: use mock libraries
+            add_subdirectory(${CMAKE_SOURCE_DIR}/cmake/mock_npcap)
+            add_library(PCAP::PCAP IMPORTED INTERFACE)
+            set_target_properties(PCAP::PCAP PROPERTIES
+                INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/cmake/mock_npcap/include"
+                INTERFACE_LINK_LIBRARIES "mock_libpcap"
+            )
+        else()
+            # Release build: use real npcap SDK
+            set(NPCAP_SDK "$ENV{NPCAP_SDK_PATH}")
+            find_path(PCAP_INCLUDE_DIR NAMES pcap/pcap.h PATHS "${NPCAP_SDK}/Include" NO_DEFAULT_PATH)
+            find_library(PCAP_LIBRARY NAMES wpcap pcap PATHS "${NPCAP_SDK}/Lib/x64" NO_DEFAULT_PATH)
+            if(PCAP_INCLUDE_DIR AND PCAP_LIBRARY)
+                add_library(PCAP::PCAP IMPORTED SHARED)
+                set_target_properties(PCAP::PCAP PROPERTIES
+                    IMPORTED_LOCATION "${PCAP_LIBRARY}"
+                    INTERFACE_INCLUDE_DIRECTORIES "${PCAP_INCLUDE_DIR}"
+                )
+            else()
+                message(FATAL_ERROR "npcap SDK not found. Set NPCAP_SDK_PATH or set BUILDING_FOR_CI=1 for mock builds.")
+            endif()
+        endif()
+    endif()
 
-    # Combine them into a single target for ease of use
-    add_library(PcapPlusPlus::PcapPlusPlus INTERFACE IMPORTED GLOBAL)
+    if(NOT TARGET Packet::Packet)
+        if(DEFINED ENV{BUILDING_FOR_CI} OR NPCAP_SDK_PATH STREQUAL "")
+            # CI build: use mock libraries
+            add_library(Packet::Packet IMPORTED INTERFACE)
+            set_target_properties(Packet::Packet PROPERTIES
+                INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/cmake/mock_npcap/include"
+                INTERFACE_LINK_LIBRARIES "mock_packet"
+            )
+        else()
+            # Release build: use real npcap SDK
+            set(NPCAP_SDK "$ENV{NPCAP_SDK_PATH}")
+            find_path(PACKET_INCLUDE_DIR NAMES Packet32.h PATHS "${NPCAP_SDK}/Include" NO_DEFAULT_PATH)
+            find_library(PACKET_LIBRARY NAMES Packet PATHS "${NPCAP_SDK}/Lib/x64" NO_DEFAULT_PATH)
+            if(PACKET_INCLUDE_DIR AND PACKET_LIBRARY)
+                add_library(Packet::Packet IMPORTED SHARED)
+                set_target_properties(Packet::Packet PROPERTIES
+                    IMPORTED_LOCATION "${PACKET_LIBRARY}"
+                    INTERFACE_INCLUDE_DIRECTORIES "${PACKET_INCLUDE_DIR}"
+                )
+            else()
+                message(FATAL_ERROR "npcap SDK Packet library not found. Set NPCAP_SDK_PATH or set BUILDING_FOR_CI=1 for mock builds.")
+            endif()
+        endif()
+    endif()
+
+    # Also provide mock_light_pcapng for CI (Pcap++ depends on light_pcapng symbols)
+    if(NOT TARGET mock_light_pcapng AND (DEFINED ENV{BUILDING_FOR_CI} OR NPCAP_SDK_PATH STREQUAL ""))
+        add_subdirectory(${CMAKE_SOURCE_DIR}/cmake/mock_npcap)
+    endif()
 
 endif()
 
@@ -133,8 +176,9 @@ target_include_directories(${MAIN_EXECUTABLE_NAME} SYSTEM PRIVATE
 # target_link_directories(${MAIN_EXECUTABLE_NAME} PRIVATE ${<SomeLib>_BINARY_DIR}/lib)
 
 if(WIN32)
+    # PcapPlusPlus::Pcap++ already depends on PCAP::PCAP, Packet::Packet, ws2_32, iphlpapi, pthread
     target_link_libraries(${MAIN_EXECUTABLE_NAME} PRIVATE
-         PCAP::PCAP Packet::Packet PcapPlusPlus::Pcap++ PcapPlusPlus::Common++
+        PcapPlusPlus::Pcap++
     )
 else()
     target_link_libraries(${MAIN_EXECUTABLE_NAME} PRIVATE
