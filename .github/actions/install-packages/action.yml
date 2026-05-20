@@ -19,12 +19,6 @@ runs:
       run: |
         brew install ccache tcpreplay
 
-    - name: Install common Windows Dependencies
-      if: runner.os == 'Windows'
-      shell: bash
-      run: |
-        vcpkg install pcapplusplus
-
     - name: Install valgrind
       shell: bash
       if: runner.os == 'Linux' && matrix.runs_valgrind == true
