@@ -212,7 +212,3 @@ int light_is_compressed_file(light_file_t *f) {
     (void)f;
     return 0;
 }
-
-int light_close_compressed(light_file_t *f) {
-    return light_close(f);
-}
