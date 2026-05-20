@@ -6,6 +6,7 @@
  */
 #include "Packet32.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 /* Stub implementations */
 
