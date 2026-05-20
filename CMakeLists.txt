@@ -48,7 +48,54 @@ if(UNIX)
     FetchContent_MakeAvailable(PcapPlusPlus)
     #endif()
 else()
-    find_package(PcapPlusPlus)
+    if(MINGW)
+        set(PCPP_URL "https://github.com/seladb/PcapPlusPlus/releases/download/v25.05/pcapplusplus-25.05-windows-mingw64-x86_64-gcc-15.1.0.zip")
+        set(PCPP_SUBDIR "pcapplusplus-25.05-windows-mingw64-x86_64-gcc-15.1.0")
+    elseif(MSVC)
+        # Check if we are building in Debug or Release mode to choose the matching MSVC asset
+        if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+            set(PCPP_URL "https://github.com/seladb/PcapPlusPlus/releases/download/v25.05/pcapplusplus-25.05-windows-vs2022-x64-debug.zip")
+            set(PCPP_SUBDIR "pcapplusplus-25.05-windows-vs2022-x64-debug")
+        else()
+            set(PCPP_URL "https://github.com/seladb/PcapPlusPlus/releases/download/v25.05/pcapplusplus-25.05-windows-vs2022-x64-release.zip")
+            set(PCPP_SUBDIR "pcapplusplus-25.05-windows-vs2022-x64-release")
+        endif()
+    else()
+        message(FATAL_ERROR "Unsupported toolchain. This configuration only supports MinGW or MSVC.")
+    endif()
+
+    # 2. Declare and Populate the content using FetchContent
+    FetchContent_Declare(
+        pcapplusplus
+        URL ${PCPP_URL}
+        DOWNLOAD_ONLY TRUE
+    )
+
+    FetchContent_MakeAvailable(pcapplusplus)
+
+    # 3. Create interface/imported targets to map the downloaded binaries
+    # Note: PcapPlusPlus relies on Common++, Packet++, and Pcap++
+    set(PCPP_ROOT "${pcapplusplus_SOURCE_DIR}/${PCPP_SUBDIR}")
+    set(PCPP_INCLUDE_DIR "${PCPP_ROOT}/include/pcapplusplus")
+    set(PCPP_LIB_DIR "${PCPP_ROOT}/lib")
+
+    # Helper function to define imported static libraries
+    function(add_pcpp_library TARGET_NAME LIB_FILE_NAME)
+        add_library(${TARGET_NAME} STATIC IMPORTED GLOBAL)
+        set_target_properties(${TARGET_NAME} PROPERTIES
+            INTERFACE_INCLUDE_DIRECTORIES "${PCPP_INCLUDE_DIR}"
+            IMPORTED_LOCATION "${PCPP_LIB_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}${LIB_FILE_NAME}${CMAKE_STATIC_LIBRARY_SUFFIX}"
+        )
+    endfunction()
+
+    # Define the three PcapPlusPlus libraries
+    add_pcpp_library(PcapPlusPlus::Common++ "Common++")
+    add_pcpp_library(PcapPlusPlus::Packet++ "Packet++")
+    add_pcpp_library(PcapPlusPlus::Pcap++ "Pcap++")
+
+    # Combine them into a single target for ease of use
+    add_library(PcapPlusPlus::PcapPlusPlus INTERFACE IMPORTED GLOBAL)
+
 endif()
 
 ###############################################################################
