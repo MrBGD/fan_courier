@@ -1,15 +1,9 @@
 cmake_minimum_required(VERSION 3.26)
 
-# NOTE: update executable name in .github/workflows/cmake.yml:25 when changing executable name in this file
-# for now, the project name is used as the executable name
 set(MAIN_PROJECT_NAME "oop")
 set(MAIN_EXECUTABLE_NAME "${MAIN_PROJECT_NAME}")
 
-
 project(${MAIN_PROJECT_NAME})
-# set(CMAKE_PROJECT_VERSION_MAJOR 0)
-# set(CMAKE_PROJECT_VERSION_MINOR 0)
-# set(CMAKE_PROJECT_VERSION_PATCH 1)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -20,35 +14,105 @@ include(cmake/CompilerFlags.cmake)
 include(cmake/CopyHelper.cmake)
 
 ###############################################################################
-
-# external dependencies with FetchContent
+# EXTERNAL DEPENDENCIES & FETCH
+###############################################################################
 include(FetchContent)
-
 set(FETCHCONTENT_QUIET OFF CACHE INTERNAL "Override verbose output" FORCE)
 set(FETCHCONTENT_UPDATES_DISCONNECTED ON CACHE INTERNAL "Override update strategy" FORCE)
 
-# NOTE: Also update env vars used for caching in
-#     - .github/actions/configure-cmake/action.yml
-#     - .github/workflows/cmake.yml
+# Threading este necesar intern de PcapPlusPlus
+find_package(Threads REQUIRED)
+
 if(UNIX)
-    #if(APPLE)
-    #    find_package(PcapPlusPlus)
-    #else()
     FetchContent_Declare(
-        PcapPlusPlus
-        GIT_REPOSITORY https://github.com/seladb/PcapPlusPlus.git
-        GIT_TAG        v25.05 # <which tag/branch @ <some_date>>
-        GIT_SHALLOW    1  # works only with branches or tags, not with arbitrary commit hashes
-        GIT_PROGRESS   ON
+            PcapPlusPlus
+            GIT_REPOSITORY https://github.com/seladb/PcapPlusPlus.git
+            GIT_TAG        v25.05
+            GIT_SHALLOW    1
+            GIT_PROGRESS   ON
     )
-    # Optimize PcapPlusPlus compilation by disabling tools/examples you don't need
     set(PCAPPP_BUILD_EXAMPLES OFF CACHE INTERNAL "")
     set(PCAPPP_BUILD_TUTORIALS OFF CACHE INTERNAL "")
-
     FetchContent_MakeAvailable(PcapPlusPlus)
-    #endif()
 else()
-    # Windows: use pre-built PcapPlusPlus binaries
+    # ==============================================================================
+    # 1. DYNAMICALLY FETCH OFFICIAL NPCAP SDK
+    # ==============================================================================
+    message(STATUS "Fetching official Npcap SDK...")
+    FetchContent_Declare(
+            npcap_sdk
+            URL "https://npcap.com/dist/npcap-sdk-1.13.zip"
+    )
+    FetchContent_MakeAvailable(npcap_sdk)
+    set(NPCAP_SDK_DIR "${npcap_sdk_SOURCE_DIR}")
+    set(NPCAP_REAL_INCLUDE_DIR "${NPCAP_SDK_DIR}/Include")
+
+    # ==============================================================================
+    # 2. PROVIDE PCAP::PCAP and Packet::Packet
+    # ==============================================================================
+    if(DEFINED ENV{BUILDING_FOR_CI})
+        message(STATUS "### Windows: Configuring MOCK Npcap Build ###")
+
+        add_subdirectory(${CMAKE_SOURCE_DIR}/cmake/mock_npcap)
+
+        if(NOT TARGET PCAP::PCAP)
+            add_library(PCAP::PCAP IMPORTED INTERFACE)
+            set_target_properties(PCAP::PCAP PROPERTIES
+                    INTERFACE_INCLUDE_DIRECTORIES "${NPCAP_REAL_INCLUDE_DIR}"
+                    INTERFACE_LINK_LIBRARIES "mock_libpcap"
+            )
+        endif()
+
+        if(NOT TARGET Packet::Packet)
+            add_library(Packet::Packet IMPORTED INTERFACE)
+            set_target_properties(Packet::Packet PROPERTIES
+                    INTERFACE_INCLUDE_DIRECTORIES "${NPCAP_REAL_INCLUDE_DIR}"
+                    INTERFACE_LINK_LIBRARIES "mock_packet"
+            )
+        endif()
+    else()
+        message(STATUS "### Windows: Configuring REAL Npcap Build ###")
+
+        if(NOT TARGET PCAP::PCAP)
+            find_path(PCAP_INCLUDE_DIR NAMES pcap/pcap.h PATHS "${NPCAP_SDK_DIR}/Include" NO_DEFAULT_PATH)
+            find_library(PCAP_LIBRARY NAMES wpcap pcap PATHS "${NPCAP_SDK_DIR}/Lib/x64" NO_DEFAULT_PATH)
+            if(PCAP_INCLUDE_DIR AND PCAP_LIBRARY)
+                add_library(PCAP::PCAP IMPORTED SHARED)
+                set_target_properties(PCAP::PCAP PROPERTIES
+                        IMPORTED_LOCATION "${PCAP_LIBRARY}"
+                        INTERFACE_INCLUDE_DIRECTORIES "${PCAP_INCLUDE_DIR}"
+                )
+            else()
+                message(FATAL_ERROR "Real npcap SDK could not be configured.")
+            endif()
+        endif()
+
+        if(NOT TARGET Packet::Packet)
+            find_path(PACKET_INCLUDE_DIR NAMES Packet32.h PATHS "${NPCAP_SDK_DIR}/Include" NO_DEFAULT_PATH)
+            find_library(PACKET_LIBRARY NAMES Packet PATHS "${NPCAP_SDK_DIR}/Lib/x64" NO_DEFAULT_PATH)
+            if(PACKET_INCLUDE_DIR AND PACKET_LIBRARY)
+                add_library(Packet::Packet IMPORTED SHARED)
+                set_target_properties(Packet::Packet PROPERTIES
+                        IMPORTED_LOCATION "${PACKET_LIBRARY}"
+                        INTERFACE_INCLUDE_DIRECTORIES "${PACKET_INCLUDE_DIR}"
+                )
+            else()
+                message(FATAL_ERROR "Real npcap SDK Packet library not found.")
+            endif()
+        endif()
+    endif()
+
+    # ==============================================================================
+    # 3. TRICK CMAKE SO PCAPPLUSPLUS DOESN'T SILENTLY FAIL
+    # Creăm două module false pentru a satisface 'find_dependency' din PcapPlusPlus
+    # ==============================================================================
+    file(WRITE "${CMAKE_BINARY_DIR}/dummy_modules/FindPCAP.cmake" "set(PCAP_FOUND TRUE)")
+    file(WRITE "${CMAKE_BINARY_DIR}/dummy_modules/FindPacket.cmake" "set(Packet_FOUND TRUE)")
+    list(APPEND CMAKE_MODULE_PATH "${CMAKE_BINARY_DIR}/dummy_modules")
+
+    # ==============================================================================
+    # 4. DOWNLOAD & CONFIGURE PCAPPLUSPLUS
+    # ==============================================================================
     if(MINGW)
         set(PCPP_URL "https://github.com/seladb/PcapPlusPlus/releases/download/v25.05/pcapplusplus-25.05-windows-mingw64-x86_64-gcc-15.1.0.zip")
     elseif(MSVC)
@@ -59,169 +123,76 @@ else()
         endif()
     endif()
 
-    # Download and extract pre-built binaries
     FetchContent_Declare(
-        pcapplusplus
-        DOWNLOAD_ONLY TRUE
-        URL "${PCPP_URL}"
+            pcapplusplus
+            DOWNLOAD_ONLY TRUE
+            URL "${PCPP_URL}"
     )
     FetchContent_MakeAvailable(pcapplusplus)
 
-    # Set paths to extracted binaries
     set(PCPP_ROOT "${pcapplusplus_SOURCE_DIR}")
-    # The archive extracts to a subdirectory named after the archive
-    # Find the actual subdirectory (handle both single and multiple subdirs)
     file(GLOB PCPP_SUBDIRS "${pcapplusplus_SOURCE_DIR}/pcapplusplus-*")
     if(PCPP_SUBDIRS)
         list(GET PCPP_SUBDIRS 0 PCPP_SUBDIR)
     else()
-        # Fallback: use the source directory directly if glob fails
         set(PCPP_SUBDIR "${pcapplusplus_SOURCE_DIR}")
     endif()
     set(PCPP_CMAKE_DIR "${PCPP_SUBDIR}/lib/cmake/pcapplusplus")
 
-    # Include the pre-built CMake config files (these define PcapPlusPlus::Pcap++ etc.)
-    include("${PCPP_CMAKE_DIR}/PcapPlusPlusConfig.cmake")
-
-    # --- Provide PCAP::PCAP and Packet::Packet targets ---
-    # These are required by PcapPlusPlus but come from the npcap SDK.
-    # For CI builds: use mock libraries.
-    # For release builds: use the real npcap SDK.
-    if(NOT TARGET PCAP::PCAP)
-        if(DEFINED ENV{BUILDING_FOR_CI} OR NPCAP_SDK_PATH STREQUAL "")
-            # CI build: use mock libraries
-            add_subdirectory(${CMAKE_SOURCE_DIR}/cmake/mock_npcap)
-            add_library(PCAP::PCAP IMPORTED INTERFACE)
-            set_target_properties(PCAP::PCAP PROPERTIES
-                INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/cmake/mock_npcap/include"
-                INTERFACE_LINK_LIBRARIES "mock_libpcap"
-            )
-        else()
-            # Release build: use real npcap SDK
-            set(NPCAP_SDK "$ENV{NPCAP_SDK_PATH}")
-            find_path(PCAP_INCLUDE_DIR NAMES pcap/pcap.h PATHS "${NPCAP_SDK}/Include" NO_DEFAULT_PATH)
-            find_library(PCAP_LIBRARY NAMES wpcap pcap PATHS "${NPCAP_SDK}/Lib/x64" NO_DEFAULT_PATH)
-            if(PCAP_INCLUDE_DIR AND PCAP_LIBRARY)
-                add_library(PCAP::PCAP IMPORTED SHARED)
-                set_target_properties(PCAP::PCAP PROPERTIES
-                    IMPORTED_LOCATION "${PCAP_LIBRARY}"
-                    INTERFACE_INCLUDE_DIRECTORIES "${PCAP_INCLUDE_DIR}"
-                )
-            else()
-                message(FATAL_ERROR "npcap SDK not found. Set NPCAP_SDK_PATH or set BUILDING_FOR_CI=1 for mock builds.")
-            endif()
-        endif()
-    endif()
-
-    if(NOT TARGET Packet::Packet)
-        if(DEFINED ENV{BUILDING_FOR_CI} OR NPCAP_SDK_PATH STREQUAL "")
-            # CI build: use mock libraries
-            add_library(Packet::Packet IMPORTED INTERFACE)
-            set_target_properties(Packet::Packet PROPERTIES
-                INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/cmake/mock_npcap/include"
-                INTERFACE_LINK_LIBRARIES "mock_packet"
-            )
-        else()
-            # Release build: use real npcap SDK
-            set(NPCAP_SDK "$ENV{NPCAP_SDK_PATH}")
-            find_path(PACKET_INCLUDE_DIR NAMES Packet32.h PATHS "${NPCAP_SDK}/Include" NO_DEFAULT_PATH)
-            find_library(PACKET_LIBRARY NAMES Packet PATHS "${NPCAP_SDK}/Lib/x64" NO_DEFAULT_PATH)
-            if(PACKET_INCLUDE_DIR AND PACKET_LIBRARY)
-                add_library(Packet::Packet IMPORTED SHARED)
-                set_target_properties(Packet::Packet PROPERTIES
-                    IMPORTED_LOCATION "${PACKET_LIBRARY}"
-                    INTERFACE_INCLUDE_DIRECTORIES "${PACKET_INCLUDE_DIR}"
-                )
-            else()
-                message(FATAL_ERROR "npcap SDK Packet library not found. Set NPCAP_SDK_PATH or set BUILDING_FOR_CI=1 for mock builds.")
-            endif()
-        endif()
-    endif()
-
-    # Also provide mock_light_pcapng for CI (Pcap++ depends on light_pcapng symbols)
-    if(NOT TARGET mock_light_pcapng AND (DEFINED ENV{BUILDING_FOR_CI} OR NPCAP_SDK_PATH STREQUAL ""))
-        add_subdirectory(${CMAKE_SOURCE_DIR}/cmake/mock_npcap)
-    endif()
+    # Forțăm PcapPlusPlus să se încarce robust cu find_package
+    set(PcapPlusPlus_DIR "${PCPP_CMAKE_DIR}")
+    find_package(PcapPlusPlus REQUIRED CONFIG PATHS "${PCPP_CMAKE_DIR}" NO_DEFAULT_PATH)
 
 endif()
 
 ###############################################################################
-
-# external dependencies with find_package
-
-# find_package(Threads REQUIRED)
-
+# EXECUTABLES & SOURCES
 ###############################################################################
-
-# NOTE: update executable name in .github/workflows/cmake.yml:25 when changing name here
 add_executable(${MAIN_EXECUTABLE_NAME}
-    main.cpp
+        main.cpp
 )
 target_sources(${MAIN_EXECUTABLE_NAME}
-    PRIVATE
-        src/Example.cpp
+        PRIVATE
+        src/dashboard_panel.cpp
+        src/login_panel.cpp
+        src/network.cpp
+        src/network_packet.cpp
+        src/panel.cpp
+        src/safe_queue.cpp
+        src/user.cpp
 )
 
-# NOTE: Add all defined targets (e.g. executables, libraries, etc. )
-# NOTE: RUN_SANITIZERS is optional, if it's not present it will default to true
 set_compiler_flags(RUN_SANITIZERS ${USE_ASAN} TARGET_NAMES ${MAIN_EXECUTABLE_NAME})
-# set_compiler_flags(TARGET_NAMES ${MAIN_EXECUTABLE_NAME} ${FOO} ${BAR})
-# where ${FOO} and ${BAR} represent additional executables or libraries
-# you want to compile with the set compiler flags
 
-###############################################################################
-
-# use SYSTEM so cppcheck and clang-tidy do not report warnings from these directories
 target_include_directories(${MAIN_EXECUTABLE_NAME} PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
 )
 target_include_directories(${MAIN_EXECUTABLE_NAME} SYSTEM PRIVATE
-    ext
+        ext
 )
-# target_include_directories(${MAIN_EXECUTABLE_NAME} SYSTEM PRIVATE ${<SomeLib>_SOURCE_DIR}/include)
-# target_link_directories(${MAIN_EXECUTABLE_NAME} PRIVATE ${<SomeLib>_BINARY_DIR}/lib)
 
 if(WIN32)
-    # PcapPlusPlus::Pcap++ already depends on PCAP::PCAP, Packet::Packet, ws2_32, iphlpapi, pthread
     target_link_libraries(${MAIN_EXECUTABLE_NAME} PRIVATE
-        PcapPlusPlus::Pcap++
+            PcapPlusPlus::Pcap++
+            pthread
     )
 else()
     target_link_libraries(${MAIN_EXECUTABLE_NAME} PRIVATE
-        Pcap++ Common++
+            Pcap++ Common++ pthread
     )
 endif()
 
-# Apply platform-specific linkage
 if(WIN32)
     target_include_directories(${PROJECT_NAME} PRIVATE ${WINDIVERT_INCLUDE_DIR})
     target_link_libraries(${PROJECT_NAME} PRIVATE ${WINDIVERT_LIB})
-    
-    # --- CRITICAL WINDOWS CI AUTOMATION STEP ---
-    # Automatically copy WinDivert.dll and WinDivert64.sys to your build folder 
-    # so your tests can run seamlessly without throwing runtime missing-dll errors.
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${WINDIVERT_BIN_DIR}/WinDivert.dll"
-            "$<TARGET_FILE_DIR:${PROJECT_NAME}>/WinDivert.dll"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${WINDIVERT_BIN_DIR}/WinDivert64.sys"
-            "$<TARGET_FILE_DIR:${PROJECT_NAME}>/WinDivert64.sys"
-        COMMENT "Deploying WinDivert drivers to output directory for local execution"
-    )
+
 else()
     target_link_libraries(${PROJECT_NAME} PRIVATE ${PCAP_LIBRARY})
 endif()
 
-###############################################################################
-
-# copy binaries to "bin" folder; these are uploaded as artifacts on each release
-# DESTINATION_DIR is set as "bin" in cmake/Options.cmake:6
 install(TARGETS ${MAIN_EXECUTABLE_NAME} DESTINATION ${DESTINATION_DIR})
 if(APPLE)
     install(FILES launcher.command DESTINATION ${DESTINATION_DIR})
 endif()
 
 copy_files(FILES tastatura.txt DIRECTORY assets COPY_TO_DESTINATION TARGET_NAME ${MAIN_EXECUTABLE_NAME})
-# copy_files(FILES tastatura.txt config.json DIRECTORY images sounds COPY_TO_DESTINATION TARGET_NAME ${MAIN_EXECUTABLE_NAME})
-# copy_files(DIRECTORY images sounds COPY_TO_DESTINATION TARGET_NAME ${MAIN_EXECUTABLE_NAME})

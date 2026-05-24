@@ -1,5 +1,5 @@
 /*
- * Mock Ndis.h for CI builds.
+* Mock Ndis.h for CI builds.
  */
 #ifndef NDIS_H
 #define NDIS_H

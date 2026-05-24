@@ -1,0 +1,8 @@
+//
+// Created by bogdii on 5/11/2026.
+//
+
+#ifndef ADMINISTRATION_PANEL_CMD_EXEC_H
+#define ADMINISTRATION_PANEL_CMD_EXEC_H
+
+#endif //ADMINISTRATION_PANEL_CMD_EXEC_H
