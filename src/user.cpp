@@ -1,0 +1,16 @@
+#include "../include/user.h"
+#include <ostream>
+
+int User::totalUsers = 0;
+
+User::User(std::string name, unsigned int id, std::string user_role, std::string hash)
+    : username(std::move(name)), userId(id),
+      role(std::move(user_role)), hash_password(std::move(hash))
+{
+    ++totalUsers;
+}
+
+std::ostream& operator<<(std::ostream& os, const User& u) {
+    os << "[" << u.role << "] " << u.username << " (id=" << u.userId << ")";
+    return os;
+}

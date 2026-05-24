@@ -154,11 +154,12 @@ add_executable(${MAIN_EXECUTABLE_NAME}
 target_sources(${MAIN_EXECUTABLE_NAME}
         PRIVATE
         src/dashboard_panel.cpp
+        src/guest_user.cpp
         src/login_panel.cpp
         src/network.cpp
         src/network_packet.cpp
+        src/packet_observer.cpp
         src/panel.cpp
-        src/safe_queue.cpp
         src/user.cpp
 )
 
@@ -171,23 +172,39 @@ target_include_directories(${MAIN_EXECUTABLE_NAME} SYSTEM PRIVATE
         ext
 )
 
+find_package(PCAP REQUIRED)
+
+# Forcefully set the IMPLIB properties for Windows MSVC builds
+if(WIN32)
+    # Patch PCAP
+    if(TARGET PCAP::PCAP)
+        set_target_properties(PCAP::PCAP PROPERTIES
+                IMPORTED_IMPLIB_DEBUG "${PCAP_LIBRARY}"
+                IMPORTED_IMPLIB_RELEASE "${PCAP_LIBRARY}"
+                IMPORTED_IMPLIB "${PCAP_LIBRARY}"
+        )
+    endif()
+
+    # Patch Packet
+    if(TARGET Packet::Packet)
+        set_target_properties(Packet::Packet PROPERTIES
+                IMPORTED_IMPLIB_DEBUG "${PACKET_LIBRARY}"
+                IMPORTED_IMPLIB_RELEASE "${PACKET_LIBRARY}"
+                IMPORTED_IMPLIB "${PACKET_LIBRARY}"
+        )
+    endif()
+endif()
+
+
 if(WIN32)
     target_link_libraries(${MAIN_EXECUTABLE_NAME} PRIVATE
             PcapPlusPlus::Pcap++
-            pthread
+            Threads::Threads
     )
 else()
     target_link_libraries(${MAIN_EXECUTABLE_NAME} PRIVATE
-            Pcap++ Common++ pthread
+            Pcap++ Common++ Threads::Threads
     )
-endif()
-
-if(WIN32)
-    target_include_directories(${PROJECT_NAME} PRIVATE ${WINDIVERT_INCLUDE_DIR})
-    target_link_libraries(${PROJECT_NAME} PRIVATE ${WINDIVERT_LIB})
-
-else()
-    target_link_libraries(${PROJECT_NAME} PRIVATE ${PCAP_LIBRARY})
 endif()
 
 install(TARGETS ${MAIN_EXECUTABLE_NAME} DESTINATION ${DESTINATION_DIR})
@@ -195,4 +212,4 @@ if(APPLE)
     install(FILES launcher.command DESTINATION ${DESTINATION_DIR})
 endif()
 
-copy_files(FILES tastatura.txt DIRECTORY assets COPY_TO_DESTINATION TARGET_NAME ${MAIN_EXECUTABLE_NAME})
+copy_files(FILES tastatura.txt users.json DIRECTORY assets COPY_TO_DESTINATION TARGET_NAME ${MAIN_EXECUTABLE_NAME})

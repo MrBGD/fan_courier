@@ -1,69 +1,70 @@
 #include "../include/login_panel.h"
 #include "../include/admin.h"
 #include "../include/basic_user.h"
+#include "../include/Exceptions.h"
 #include <iostream>
-#include <vector>
-#include <string>
 #include <fstream>
+#include <algorithm>
 #include "../ext/json.hpp"
 #include "../ext/picosha2.h"
-#include <algorithm>
-using json=nlohmann::json;
 
-static std::string hash_password(const std::string& password) {
-    std::string hash_hex_str;
-    picosha2::hash256_hex_string(password, hash_hex_str);
-    return hash_hex_str;
+using json = nlohmann::json;
+
+static std::string sha256(const std::string& password) {
+    std::string hex;
+    picosha2::hash256_hex_string(password, hex);
+    return hex;
 }
 
 void Login::load_users() {
-    std::ifstream file("../users.json");
+    std::ifstream file("users.json");
     if (!file.is_open()) {
-        std::cout<<"error"; // adaugat la exceptii
+        throw FileNotFoundException("users.json");
     }
-    json data=json::parse(file);
+
+    json data;
+    try {
+        data = json::parse(file);
+    } catch (const json::parse_error& e) {
+        throw JsonParseException(std::string("invalid JSON — ") + e.what());
+    }
 
     for (const auto& item : data["users"]) {
-        std::string name=item["username"];
-        std::string hash_password=item["password"];
-        std::string role=item["role"];
-        unsigned int id=item["id"];
-        if (role =="Administrator") {
-            users.push_back(std::make_unique<Admin>(name,id,role,hash_password));
-        }
-        else if (role=="Basic") {
-            users.push_back(std::make_unique<BasicUser>(name,id,role,hash_password));
-        }
-        else {
-            std::cout<<"error de json"; //exceptie
+        std::string name  = item["username"];
+        std::string hash  = item["password"];
+        std::string role  = item["role"];
+        unsigned int id   = item["id"];
+
+        if (role == "Administrator") {
+            users.push_back(std::make_unique<Admin>(name, id, role, hash));
+        } else if (role == "Basic") {
+            users.push_back(std::make_unique<BasicUser>(name, id, role, hash));
+        } else {
+            throw JsonParseException("unknown role '" + role + "'");
         }
     }
-
 }
 
 std::unique_ptr<User> Login::login() {
-    std::string username;
-    std::string password;
-    std::cout<<"username: "; std::cin>>username;
-    std::cout<<"password: "; std::cin>>password;
+    std::string username, password;
+    std::cout << "username: "; std::cin >> username;
+    std::cout << "password: "; std::cin >> password;
 
-    auto user_iterate = std::find_if(users.begin(),users.end(),[&username](const std::unique_ptr<User>& user) {
-        return user->get_username()==username;
-    });
+    auto it = std::find_if(users.begin(), users.end(),
+        [&username](const std::unique_ptr<User>& u) {
+            return u->get_username() == username;
+        });
 
-    if (user_iterate==users.end()) {
-        throw UserNotFoundException();
-    }
-    if ((*user_iterate)->check_password(hash_password(password))) {
-        std::cout<<"logged in !";
-        std::unique_ptr<User> authenticatedUser = std::move(*user_iterate);
-        users.erase(user_iterate);
-        return authenticatedUser;
-    }
-    else
-        throw InvalidPasswordException();
+    if (it == users.end()) throw UserNotFoundException();
+
+    if (!(*it)->check_password(sha256(password))) throw InvalidPasswordException();
+
+    std::cout << "Login successful.\n";
+    std::unique_ptr<User> authenticated = std::move(*it);
+    users.erase(it);
+    return authenticated;
 }
 
-// void Login::add_user(std::unique_ptr<User> user) {
-//
-// }
+void Login::add_user(std::unique_ptr<User> user) {
+    users.push_back(std::move(user));
+}

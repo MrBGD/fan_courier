@@ -21,8 +21,20 @@ public:
 
 class JsonParseException : public AppException {
 public:
-    explicit JsonParseException(const std::string& role)
-        : AppException("Error: Invalid role '" + role + "' found in JSON.") {}
+    explicit JsonParseException(const std::string& detail)
+        : AppException("Error: JSON parse failure — " + detail) {}
 };
 
-#endif //ADMINISTRATION_PANEL_EXCEPTIONS_H
+class FileNotFoundException : public AppException {
+public:
+    explicit FileNotFoundException(const std::string& filename)
+        : AppException("Error: File not found: " + filename) {}
+};
+
+class NetworkException : public AppException {
+public:
+    explicit NetworkException(const std::string& msg)
+        : AppException("Network error: " + msg) {}
+};
+
+#endif

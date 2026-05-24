@@ -8,9 +8,8 @@
 
 template <typename T>
 class Safe_Queue {
-private:
     std::queue<T> queuelist;
-    std::mutex mutex;
+    mutable std::mutex mutex;
     std::condition_variable cv;
     std::atomic<bool> is_shutdown{false};
 
@@ -23,8 +22,7 @@ public:
 
     bool try_pop(T& item) {
         std::lock_guard<std::mutex> lock(mutex);
-        if (queuelist.empty())
-            return false;
+        if (queuelist.empty()) return false;
         item = queuelist.front();
         queuelist.pop();
         return true;
@@ -33,8 +31,7 @@ public:
     bool wait_and_pop(T& item) {
         std::unique_lock<std::mutex> lock(mutex);
         cv.wait(lock, [this]() { return !queuelist.empty() || is_shutdown; });
-        if (queuelist.empty() && is_shutdown)
-            return false;
+        if (queuelist.empty() && is_shutdown) return false;
         item = queuelist.front();
         queuelist.pop();
         return true;
@@ -44,10 +41,16 @@ public:
         is_shutdown = true;
         cv.notify_all();
     }
-    size_t size() {
+
+    [[nodiscard]] size_t size() const {
         std::lock_guard<std::mutex> lock(mutex);
         return queuelist.size();
     }
+
+    [[nodiscard]] bool empty() const {
+        std::lock_guard<std::mutex> lock(mutex);
+        return queuelist.empty();
+    }
 };
 
-#endif // ADMINISTRATION_PANEL_SAFE_QUEUE_H
+#endif
