@@ -3,8 +3,6 @@
 #include <iomanip>
 
 
-
-
 CapturedPacket::CapturedPacket()
     : timestamp(std::chrono::system_clock::now()) {}
 

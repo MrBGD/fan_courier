@@ -62,7 +62,6 @@ public:
 
 
 
-
 class HTTPCapturedPacket : public CapturedPacket {
     std::string method;
     std::string uri;
@@ -211,8 +210,6 @@ public:
 };
 
 
-
-
 class CaptureStatistics {
     size_t totalPackets{0};
     size_t tcpPackets{0};
@@ -248,9 +245,6 @@ public:
         return os;
     }
 };
-
-
-
 
 
 template<typename PacketType>

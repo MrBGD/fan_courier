@@ -3,18 +3,12 @@
 #define ADMINISTRATION_PANEL_PACKET_OBSERVER_H
 
 
-
-
-
 #include "network_packet.h"
 #include "safe_queue.h"
 #include <string>
 #include <vector>
 #include <memory>
 #include <ostream>
-
-
-
 
 class PacketObserver {
 public:
@@ -30,8 +24,6 @@ public:
 };
 
 
-
-
 class StatisticsObserver : public PacketObserver {
     std::string       name;
     CaptureStatistics stats;
@@ -45,9 +37,6 @@ public:
     [[nodiscard]] std::string toString() const override;
     [[nodiscard]] const CaptureStatistics& getStats() const { return stats; }
 };
-
-
-
 
 
 class AlertObserver : public PacketObserver {
