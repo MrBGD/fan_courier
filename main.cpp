@@ -56,7 +56,7 @@ int main() {
     std::cout << "Active guest sessions after scope: " << GuestUser::getGuestCount() << "\n";
     std::cout << "Total users ever created: " << User::getTotalUsers() << "\n";
 
-    Dashboard dashboard(std::move(loggedInUser), 1, "");
+    Dashboard dashboard(std::move(loggedInUser), "");
 
     auto statsObs = std::make_shared<StatisticsObserver>("global-stats");
     auto alertObs = std::make_shared<AlertObserver>("alert-monitor", 50);

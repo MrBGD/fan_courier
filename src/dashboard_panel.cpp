@@ -4,9 +4,9 @@
 #include "PcapLiveDeviceList.h"
 
 Dashboard::Dashboard(std::unique_ptr<User> curr_user,
-                     unsigned int do_action, std::string cmd)
+                     std::string cmd)
     : Panel(true), current_user(std::move(curr_user)),
-      action(do_action), command(std::move(cmd)) {}
+      command(std::move(cmd)) {}
 
 void Dashboard::open_traffic_monitor() {
     if (!current_user->permissions()) {

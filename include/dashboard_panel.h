@@ -16,7 +16,6 @@
 
 class Dashboard : public Panel {
     std::unique_ptr<User>       current_user;
-    unsigned int                action;
     std::string                 command;
     Safe_Queue<std::shared_ptr<CapturedPacket>> shared_queue;
     std::unique_ptr<Network_Traffic>            traffic_monitor;
@@ -25,7 +24,7 @@ class Dashboard : public Panel {
     std::vector<std::shared_ptr<PacketObserver>> observers;
 
 public:
-    Dashboard(std::unique_ptr<User> curr_user, unsigned int do_action, std::string cmd);
+    Dashboard(std::unique_ptr<User> curr_user, std::string cmd);
 
     void open_traffic_monitor();
     void stop_monitor();
