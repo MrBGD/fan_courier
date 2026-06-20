@@ -90,7 +90,25 @@ else()
     )
 
     if(NOT TARGET PCAP::PCAP)
-        if(DEFINED ENV{BUILDING_FOR_CI} OR NPCAP_SDK_PATH STREQUAL "")
+        if(DEFINED ENV{BUILDING_FOR_CI} OR "$ENV{NPCAP_SDK_PATH}" STREQUAL "")
+            if(DEFINED ENV{BUILDING_FOR_CI})
+                message(WARNING
+                        "BUILDING_FOR_CI is set in the environment - building against the "
+                        "MOCK npcap stub on purpose (this is meant for CI runners with no "
+                        "real driver). If you're building this locally to actually capture "
+                        "traffic, unset BUILDING_FOR_CI and set NPCAP_SDK_PATH instead."
+                )
+            else()
+                message(WARNING
+                        "NPCAP_SDK_PATH is not set - building against the MOCK npcap "
+                        "stub (CI-only). The resulting binary will compile and run, but "
+                        "PcapLiveDeviceList will always report ZERO network interfaces, "
+                        "even with the real Npcap driver installed and running as admin. "
+                        "Set the NPCAP_SDK_PATH environment variable to your Npcap SDK "
+                        "folder (download from https://npcap.com/#download) and "
+                        "reconfigure to enable real packet capture."
+                )
+            endif()
             add_subdirectory(${CMAKE_SOURCE_DIR}/cmake/mock_npcap)
             add_library(PCAP::PCAP IMPORTED INTERFACE)
             set_target_properties(PCAP::PCAP PROPERTIES
@@ -102,19 +120,28 @@ else()
             find_path(PCAP_INCLUDE_DIR NAMES pcap/pcap.h PATHS "${NPCAP_SDK}/Include" NO_DEFAULT_PATH)
             find_library(PCAP_LIBRARY NAMES wpcap pcap PATHS "${NPCAP_SDK}/Lib/x64" NO_DEFAULT_PATH)
             if(PCAP_INCLUDE_DIR AND PCAP_LIBRARY)
+                message(STATUS "Using real Npcap SDK at \"${NPCAP_SDK}\" (${PCAP_LIBRARY})")
                 add_library(PCAP::PCAP IMPORTED SHARED)
                 set_target_properties(PCAP::PCAP PROPERTIES
-                        IMPORTED_LOCATION "${PCAP_LIBRARY}"
+                        IMPORTED_IMPLIB "${PCAP_LIBRARY}"
                         INTERFACE_INCLUDE_DIRECTORIES "${PCAP_INCLUDE_DIR}"
                 )
             else()
-                message(FATAL_ERROR "npcap SDK not found. Set NPCAP_SDK_PATH or BUILDING_FOR_CI=1.")
+                message(FATAL_ERROR
+                        "Npcap SDK not found under \"${NPCAP_SDK}\".\n"
+                        "Download the Npcap SDK (separate from the Npcap installer) from "
+                        "https://npcap.com/#download, unzip it, and set the NPCAP_SDK_PATH "
+                        "environment variable to that folder before running cmake, e.g.\n"
+                        "  setx NPCAP_SDK_PATH \"C:\\npcap-sdk\"   (then open a NEW shell)\n"
+                        "Expected layout: <NPCAP_SDK_PATH>/Include/pcap/pcap.h and "
+                        "<NPCAP_SDK_PATH>/Lib/x64/wpcap.lib"
+                )
             endif()
         endif()
     endif()
 
     if(NOT TARGET Packet::Packet)
-        if(DEFINED ENV{BUILDING_FOR_CI} OR NPCAP_SDK_PATH STREQUAL "")
+        if(DEFINED ENV{BUILDING_FOR_CI} OR "$ENV{NPCAP_SDK_PATH}" STREQUAL "")
             add_library(Packet::Packet IMPORTED INTERFACE)
             set_target_properties(Packet::Packet PROPERTIES
                     INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/cmake/mock_npcap/include"
@@ -127,16 +154,21 @@ else()
             if(PACKET_INCLUDE_DIR AND PACKET_LIBRARY)
                 add_library(Packet::Packet IMPORTED SHARED)
                 set_target_properties(Packet::Packet PROPERTIES
-                        IMPORTED_LOCATION "${PACKET_LIBRARY}"
+                        IMPORTED_IMPLIB "${PACKET_LIBRARY}"
                         INTERFACE_INCLUDE_DIRECTORIES "${PACKET_INCLUDE_DIR}"
                 )
             else()
-                message(FATAL_ERROR "npcap SDK Packet lib not found. Set NPCAP_SDK_PATH or BUILDING_FOR_CI=1.")
+                message(FATAL_ERROR
+                        "Npcap SDK Packet library not found under \"${NPCAP_SDK}\".\n"
+                        "Expected <NPCAP_SDK_PATH>/Include/Packet32.h and "
+                        "<NPCAP_SDK_PATH>/Lib/x64/Packet.lib - see the PCAP::PCAP error "
+                        "above for how to get/point to the SDK."
+                )
             endif()
         endif()
     endif()
 
-    if(NOT TARGET mock_light_pcapng AND (DEFINED ENV{BUILDING_FOR_CI} OR NPCAP_SDK_PATH STREQUAL ""))
+    if(NOT TARGET mock_light_pcapng AND (DEFINED ENV{BUILDING_FOR_CI} OR "$ENV{NPCAP_SDK_PATH}" STREQUAL ""))
         add_subdirectory(${CMAKE_SOURCE_DIR}/cmake/mock_npcap)
     endif()
 endif()
