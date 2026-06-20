@@ -15,6 +15,10 @@ class User {
 
     static int totalUsers;
 
+protected:
+
+    virtual void appendDetails(std::ostream& os) const { (void)os; }
+
 public:
     User(std::string name, unsigned int id, std::string user_role, std::string hash);
     virtual ~User() = default;
@@ -32,6 +36,8 @@ public:
     }
 
     static int getTotalUsers() { return totalUsers; }
+
+    void display(std::ostream& os) const;
 
     friend std::ostream& operator<<(std::ostream& os, const User& u);
 };

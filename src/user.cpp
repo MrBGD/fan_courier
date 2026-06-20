@@ -10,7 +10,12 @@ User::User(std::string name, unsigned int id, std::string user_role, std::string
     ++totalUsers;
 }
 
+void User::display(std::ostream& os) const {
+    os << "[" << role << "] " << username << " (id=" << userId << ")";
+    appendDetails(os);
+}
+
 std::ostream& operator<<(std::ostream& os, const User& u) {
-    os << "[" << u.role << "] " << u.username << " (id=" << u.userId << ")";
+    u.display(os);
     return os;
 }

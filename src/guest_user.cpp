@@ -10,6 +10,9 @@ GuestUser::GuestUser()
 GuestUser::GuestUser(std::string guestName)
     : User(std::move(guestName), 0, "Guest", ""), sessionId(++guestCount) {}
 
+GuestUser::GuestUser(const GuestUser& other)
+    : User(other), sessionId(++guestCount) {}
+
 GuestUser::~GuestUser() {
     --guestCount;
 }

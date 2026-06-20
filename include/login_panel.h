@@ -11,12 +11,16 @@
 
 class Login : public Panel {
 
-    Login()=default;
+    Login() : Panel(true) {}
     std::vector<std::unique_ptr<User>> users ;
+
+    [[nodiscard]] std::string panelLabel() const override { return "Login"; }
+    void printDetails(std::ostream& os) const override;
 
 public:
     Login(const Login&) = delete;
     Login& operator=(const Login&) = delete;
+    ~Login() override = default;
 
     static Login& getInstance() {
         static Login instance;
@@ -25,9 +29,15 @@ public:
     std::unique_ptr<User> login();
     void add_user(std::unique_ptr<User> user);
     void load_users();
+    [[nodiscard]] size_t userCount() const { return users.size(); }
+
+    // Theme-specific action: hand off to login() and report the outcome.
+    void execute() override;
+
+    // A singleton cannot be meaningfully duplicated
+    [[nodiscard]] std::unique_ptr<Panel> clone() const override;
 
 };
-
 
 
 

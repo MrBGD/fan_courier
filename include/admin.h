@@ -6,6 +6,11 @@
 #include <memory>
 
 class Admin : public User {
+protected:
+    void appendDetails(std::ostream& os) const override {
+        os << " [full access]";
+    }
+
 public:
     Admin(std::string name, unsigned int id, std::string, std::string hash)
         : User(std::move(name), id, "Administrator", std::move(hash)) {}

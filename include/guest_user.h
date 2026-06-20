@@ -12,9 +12,16 @@ class GuestUser : public User {
     static int guestCount;
     int sessionId;
 
+protected:
+    void appendDetails(std::ostream& os) const override {
+        os << " [guest session=" << sessionId << "]";
+    }
+
 public:
     GuestUser();
     explicit GuestUser(std::string guestName);
+
+    GuestUser(const GuestUser& other);
     ~GuestUser() override;
 
     void check_permissions() override;

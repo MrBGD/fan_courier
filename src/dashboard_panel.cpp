@@ -1,12 +1,36 @@
 #include "../include/dashboard_panel.h"
-#include <iostream>
+#include "../include/cmd_exec.h"
+#include "../include/report_panel.h"
+#include "../include/Exceptions.h"
 #include <algorithm>
+#include <iostream>
 #include "PcapLiveDeviceList.h"
 
-Dashboard::Dashboard(std::unique_ptr<User> curr_user,
-                     std::string cmd)
-    : Panel(true), current_user(std::move(curr_user)),
-      command(std::move(cmd)) {}
+Dashboard::Dashboard(std::unique_ptr<User> curr_user)
+    : Panel(true), current_user(std::move(curr_user)) {}
+
+Dashboard::Dashboard(const Dashboard& other)
+    : Panel(other.is_running),
+      current_user(other.current_user ? other.current_user->clone() : nullptr),
+      activePanel(other.activePanel ? other.activePanel->clone() : nullptr),
+      statistics(other.statistics),
+      capturedHistory(other.capturedHistory),
+      observers(other.observers) {}
+
+void swap(Dashboard& a, Dashboard& b) noexcept {
+    using std::swap;
+    swap(a.is_running,      b.is_running);
+    swap(a.current_user,    b.current_user);
+    swap(a.activePanel,     b.activePanel);
+    swap(a.statistics,      b.statistics);
+    swap(a.capturedHistory, b.capturedHistory);
+    swap(a.observers,       b.observers);
+}
+
+Dashboard& Dashboard::operator=(Dashboard other) {
+    swap(*this, other);
+    return *this;
+}
 
 void Dashboard::open_traffic_monitor() {
     if (!current_user->permissions()) {
@@ -95,8 +119,32 @@ void Dashboard::show_statistics() const {
               << tcpPkts.size()  << " TCP)\n";
 }
 
-void Dashboard::send_command() {
-    std::cout << "Sending: " << command << "\n";
+void Dashboard::runCommand(std::string cmd) {
+    activePanel = std::make_unique<CmdExec>(std::move(cmd), capturedHistory);
+
+    try {
+        activePanel->execute();                 // pure virtual call through the base pointer
+    } catch (const AppException& e) {
+        std::cout << e.what() << "\n";
+        return;
+    }
+
+    std::cout << *activePanel << "\n";           // NVI display, dispatched virtually
+
+    if (const auto* exec = dynamic_cast<const CmdExec*>(activePanel.get())) {
+        std::cout << "  -> result: " << exec->getLastResult()
+                   << " (run #" << exec->getExecutionCount() << ")\n";
+    }
+}
+
+void Dashboard::generateReport(std::string title) {
+    activePanel = std::make_unique<ReportPanel>(std::move(title), statistics, capturedHistory);
+    activePanel->execute();
+    std::cout << *activePanel << "\n";
+
+    if (const auto* report = dynamic_cast<const ReportPanel*>(activePanel.get())) {
+        std::cout << "  -> distinct source IPs seen: " << report->getTopTalkers().size() << "\n";
+    }
 }
 
 void Dashboard::addObserver(std::shared_ptr<PacketObserver> obs) {
@@ -132,11 +180,28 @@ void Dashboard::showObservers() const {
     }
 }
 
-std::ostream& operator<<(std::ostream& os, const Dashboard& d) {
-    os << "[Dashboard]";
-    if (d.current_user) os << " user=" << *d.current_user;
-    os << " | monitor=" << (d.traffic_monitor ? "running" : "stopped")
-       << " | queue=" << d.shared_queue.size()
-       << " | observers=" << d.observers.size();
-    return os;
+void Dashboard::execute() {
+    if (activePanel) {
+        activePanel->execute();
+    } else {
+        std::cout << "[Dashboard] No active sub-panel; use runCommand() or generateReport().\n";
+    }
+}
+
+std::unique_ptr<Panel> Dashboard::clone() const {
+    return std::make_unique<Dashboard>(*this);
+}
+
+void Dashboard::printDetails(std::ostream& os) const {
+    if (current_user) os << "user=" << *current_user << " | ";
+    os << "monitor=" << (traffic_monitor ? "running" : "stopped")
+       << " | queue=" << shared_queue.size()
+       << " | history=" << capturedHistory.size()
+       << " | observers=" << observers.size();
+
+    if (activePanel) {
+        os << " | active_panel={" << *activePanel << "}";
+    } else {
+        os << " | active_panel=none";
+    }
 }

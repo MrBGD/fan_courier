@@ -37,4 +37,10 @@ public:
         : AppException("Network error: " + msg) {}
 };
 
+class UnknownCommandException : public AppException {
+public:
+    explicit UnknownCommandException(const std::string& cmd)
+        : AppException("Error: unknown command '" + cmd + "'.") {}
+};
+
 #endif

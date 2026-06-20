@@ -6,6 +6,11 @@
 #include <memory>
 
 class BasicUser : public User {
+protected:
+    void appendDetails(std::ostream& os) const override {
+        os << " [limited access]";
+    }
+
 public:
     BasicUser(std::string name, unsigned int id, std::string, std::string hash)
         : User(std::move(name), id, "Basic", std::move(hash)) {}

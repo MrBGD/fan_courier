@@ -1,6 +1,7 @@
 #include "../include/login_panel.h"
 #include "../include/admin.h"
 #include "../include/basic_user.h"
+#include "../include/guest_user.h"
 #include "../include/Exceptions.h"
 #include <iostream>
 #include <fstream>
@@ -46,8 +47,15 @@ void Login::load_users() {
 }
 
 std::unique_ptr<User> Login::login() {
-    std::string username, password;
+    std::string username;
     std::cout << "username: "; std::cin >> username;
+
+    if (username == "guest") {
+        std::cout << "Guest access granted (read-only, no password required).\n";
+        return std::make_unique<GuestUser>();
+    }
+
+    std::string password;
     std::cout << "password: "; std::cin >> password;
 
     auto it = std::find_if(users.begin(), users.end(),
@@ -67,4 +75,16 @@ std::unique_ptr<User> Login::login() {
 
 void Login::add_user(std::unique_ptr<User> user) {
     users.push_back(std::move(user));
+}
+
+void Login::printDetails(std::ostream& os) const {
+    os << "registered_users=" << users.size();
+}
+
+void Login::execute() {
+    std::cout << "[Login] Waiting for credentials — call login() to authenticate.\n";
+}
+
+std::unique_ptr<Panel> Login::clone() const {
+    throw AppException("Login is a singleton and cannot be cloned.");
 }

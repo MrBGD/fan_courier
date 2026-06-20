@@ -146,6 +146,7 @@ endif()
 add_executable(${MAIN_EXECUTABLE_NAME} main.cpp)
 target_sources(${MAIN_EXECUTABLE_NAME}
         PRIVATE
+        src/cmd_exec.cpp
         src/dashboard_panel.cpp
         src/guest_user.cpp
         src/login_panel.cpp
@@ -153,6 +154,7 @@ target_sources(${MAIN_EXECUTABLE_NAME}
         src/network_packet.cpp
         src/packet_observer.cpp
         src/panel.cpp
+        src/report_panel.cpp
         src/user.cpp
 )
 
