@@ -28,7 +28,9 @@ public:
     [[nodiscard]] virtual std::unique_ptr<User> clone() const = 0;
 
     [[nodiscard]] const std::string& get_username() const { return username; }
+    // cppcheck-suppress unusedFunction
     [[nodiscard]] const std::string& get_role()     const { return role; }
+    // cppcheck-suppress unusedFunction
     [[nodiscard]] unsigned int       get_id()       const { return userId; }
 
     [[nodiscard]] bool check_password(const std::string& hash) const {

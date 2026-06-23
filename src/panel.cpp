@@ -10,6 +10,7 @@ Panel::Panel(bool run) : is_running(run) {
     ++totalPanelsCreated;
 }
 
+// cppcheck-suppress unusedFunction
 void Panel::shutdown() {
     is_running = false;
 }

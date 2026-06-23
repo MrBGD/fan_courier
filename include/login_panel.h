@@ -29,6 +29,7 @@ public:
     std::unique_ptr<User> login();
     void add_user(std::unique_ptr<User> user);
     void load_users();
+    // cppcheck-suppress unusedFunction
     [[nodiscard]] size_t userCount() const { return users.size(); }
 
     // Theme-specific action: hand off to login() and report the outcome.

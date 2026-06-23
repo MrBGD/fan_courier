@@ -35,6 +35,7 @@ public:
 
     [[nodiscard]] std::string getName()  const override { return name; }
     [[nodiscard]] std::string toString() const override;
+    // cppcheck-suppress unusedFunction
     [[nodiscard]] const CaptureStatistics& getStats() const { return stats; }
 };
 
@@ -50,7 +51,9 @@ public:
 
     void onPacketCaptured(const CapturedPacket& packet) override;
 
+    // cppcheck-suppress unusedFunction
     [[nodiscard]] bool   hasAlerts()  const { return !alertQueue.empty(); }
+    // cppcheck-suppress unusedFunction
     [[nodiscard]] size_t alertCount() const { return alertQueue.size(); }
     bool popAlert(std::string& out)         { return alertQueue.try_pop(out); }
 

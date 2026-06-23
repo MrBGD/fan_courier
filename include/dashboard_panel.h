@@ -42,8 +42,14 @@ public:
 
     void runCommand(std::string cmd);
 
-    // Builds a traffic report through a ReportPanel instance
+    // Builds a traffic report through a ReportPanel instance, saves it to
+    // disk as Markdown, and reports the path it was written to.
     void generateReport(std::string title);
+
+    // Lists previously saved reports and lets the user pick one to print.
+    // Static: it only delegates to ReportPanel's static file helpers and
+    // touches no Dashboard instance state.
+    static void viewSavedReports();
 
     void addObserver(std::shared_ptr<PacketObserver> obs);
     void removeObserver(const std::string& name);

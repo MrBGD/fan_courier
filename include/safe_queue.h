@@ -28,6 +28,7 @@ public:
         return true;
     }
 
+    // cppcheck-suppress unusedFunction
     bool wait_and_pop(T& item) {
         std::unique_lock<std::mutex> lock(mutex);
         cv.wait(lock, [this]() { return !queuelist.empty() || is_shutdown; });

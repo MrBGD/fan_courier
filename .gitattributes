@@ -1,1 +1,2 @@
 ext/** linguist-vendored
+cmake/mock_npcap/** linguist-vendored

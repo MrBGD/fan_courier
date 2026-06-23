@@ -30,7 +30,9 @@ public:
     void execute() override;
     [[nodiscard]] std::unique_ptr<Panel> clone() const override;
 
+    // cppcheck-suppress unusedFunction
     [[nodiscard]] const std::string& getLastResult()     const { return lastResult; }
+    // cppcheck-suppress unusedFunction
     [[nodiscard]] int                getExecutionCount() const { return executionCount; }
 };
 

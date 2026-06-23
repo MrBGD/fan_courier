@@ -31,7 +31,7 @@ void Network_Traffic::stop_monitoring() {
 }
 
 void Network_Traffic::capture() {
-    auto& devList = pcpp::PcapLiveDeviceList::getInstance();
+    const auto& devList = pcpp::PcapLiveDeviceList::getInstance();
     device = devList.getDeviceByName(interface_name);
 
     if (!device || !device->open()) {

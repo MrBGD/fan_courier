@@ -42,7 +42,7 @@ static std::vector<std::shared_ptr<CapturedPacket>> makeSamplePackets() {
 // Exercises Panel's pure virtual functions (execute/clone) and its
 // Non-Virtual-Interface display purely through base-class pointers,
 // independently of any single derived class holding them.
-static void runPanelHierarchyDemo(Login& auth) {
+static void runPanelHierarchyDemo(const Login& auth) {
     std::cout << "\n--- Panel hierarchy demo (execute/clone/operator<< via base pointer) ---\n";
 
     const auto sample = makeSamplePackets();
@@ -153,6 +153,7 @@ int main() {
                   << "5. Show Observers\n"
                   << "6. Run Command on Captured History\n"
                   << "7. Generate Traffic Report\n"
+                  << "8. View Saved Reports\n"
                   << "0. Exit\n"
                   << "Select option: ";
 
@@ -182,6 +183,7 @@ int main() {
                     dashboard.generateReport(title);
                     break;
                 }
+                case 8: Dashboard::viewSavedReports();    break;
                 case 0: running = false; break;
                 default: std::cout << "Invalid option.\n";
             }

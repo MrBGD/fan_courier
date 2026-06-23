@@ -76,6 +76,7 @@ std::unique_ptr<CapturedPacket> HTTPCapturedPacket::clone() const {
 
 std::string HTTPCapturedPacket::getType() const { return "HTTP"; }
 
+// cppcheck-suppress unusedFunction
 bool HTTPCapturedPacket::isSuccessful() const {
     return statusCode >= 200 && statusCode < 300;
 }
@@ -167,8 +168,11 @@ std::string TCPCapturedPacket::getFlagsString() const {
     return flags.empty() ? "NONE" : flags;
 }
 
+// cppcheck-suppress unusedFunction
 bool TCPCapturedPacket::isConnectionEstablishment()    const { return syn && !ack; }
+// cppcheck-suppress unusedFunction
 bool TCPCapturedPacket::isConnectionEstablishmentAck() const { return syn &&  ack; }
+// cppcheck-suppress unusedFunction
 bool TCPCapturedPacket::isConnectionTermination()      const { return fin; }
 
 std::string TCPCapturedPacket::toString() const {

@@ -29,6 +29,7 @@ public:
     Panel& operator=(const Panel&) = default;
 
     void shutdown();
+    // cppcheck-suppress unusedFunction
     [[nodiscard]] bool isRunning() const { return is_running; }
 
     // Theme-specific action every concrete panel must provide.

@@ -73,6 +73,7 @@ std::unique_ptr<User> Login::login() {
     return authenticated;
 }
 
+// cppcheck-suppress unusedFunction
 void Login::add_user(std::unique_ptr<User> user) {
     users.push_back(std::move(user));
 }

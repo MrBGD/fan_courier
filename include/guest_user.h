@@ -31,6 +31,7 @@ public:
         return std::make_unique<GuestUser>(*this);
     }
 
+    // cppcheck-suppress unusedFunction
     [[nodiscard]] int getSessionId()        const { return sessionId; }
     static int        getGuestCount()             { return guestCount; }
 };

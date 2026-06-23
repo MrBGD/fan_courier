@@ -42,7 +42,7 @@ void Dashboard::open_traffic_monitor() {
         return;
     }
 
-    auto& devList  = pcpp::PcapLiveDeviceList::getInstance();
+    const auto& devList  = pcpp::PcapLiveDeviceList::getInstance();
     const auto& devs = devList.getPcapLiveDevicesList();
 
     if (devs.empty()) {
@@ -129,28 +129,52 @@ void Dashboard::runCommand(std::string cmd) {
         return;
     }
 
-    std::cout << *activePanel << "\n";           // NVI display, dispatched virtually
-
-    if (const auto* exec = dynamic_cast<const CmdExec*>(activePanel.get())) {
-        std::cout << "  -> result: " << exec->getLastResult()
-                   << " (run #" << exec->getExecutionCount() << ")\n";
-    }
+    // CmdExec::printDetails() already includes the result and run count,
+    // so the NVI display alone is enough here - no downcast needed.
+    std::cout << *activePanel << "\n";
 }
 
 void Dashboard::generateReport(std::string title) {
-    activePanel = std::make_unique<ReportPanel>(std::move(title), statistics, capturedHistory);
-    activePanel->execute();
-    std::cout << *activePanel << "\n";
+    auto report = std::make_unique<ReportPanel>(std::move(title), statistics, capturedHistory);
 
-    if (const auto* report = dynamic_cast<const ReportPanel*>(activePanel.get())) {
-        std::cout << "  -> distinct source IPs seen: " << report->getTopTalkers().size() << "\n";
+    const ReportPanel* reportView = report.get();
+    activePanel = std::move(report);
+
+    activePanel->execute();                  // pure virtual call through the base pointer
+    std::cout << *activePanel << "\n";       // NVI display (already shows top-talker count)
+
+    const std::string savedPath = reportView->saveToFile();
+    std::cout << "  -> report saved to " << savedPath << "\n";
+}
+
+void Dashboard::viewSavedReports() {
+    const auto reports = ReportPanel::listSavedReports();
+    if (reports.empty()) {
+        std::cout << "No saved reports yet. Use 'Generate Traffic Report' first.\n";
+        return;
     }
+
+    std::cout << "=== Saved Reports ===\n";
+    for (size_t i = 0; i < reports.size(); ++i) {
+        std::cout << i << ". " << reports[i] << "\n";
+    }
+    std::cout << "Select a report to view (0-" << reports.size() - 1 << "): ";
+
+    size_t choice = 0;
+    std::cin >> choice;
+    if (choice >= reports.size()) {
+        std::cout << "Invalid choice.\n";
+        return;
+    }
+
+    std::cout << "\n" << ReportPanel::readReport(reports[choice]) << "\n";
 }
 
 void Dashboard::addObserver(std::shared_ptr<PacketObserver> obs) {
     observers.push_back(std::move(obs));
 }
 
+// cppcheck-suppress unusedFunction
 void Dashboard::removeObserver(const std::string& name) {
     observers.erase(
         std::remove_if(observers.begin(), observers.end(),
